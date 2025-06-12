@@ -11,5 +11,5 @@ AlignConsecutiveMacros: true
 Standard: Auto
 IndentWidth: 4
 UseTab: Never
-ColumnLimit: 120
+ColumnLimit: 128
 ---
