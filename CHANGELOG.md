@@ -1,5 +1,52 @@
 # CanMV K230 Changelog
 
+## v1.3
+
+Version 1.3 introduces new image format support and build system improvements.
+
+### Project Updates
+- Added new `kdimg` image format support via genimage updates
+
+## v1.3-RC2
+
+Release candidate 2 for version 1.3 brings important fixes and stability improvements.
+
+### Bug Fixes
+#### **CanMV**
+- Fixed `machine.I2C` module error handling
+- Resolved `machine.FPIOA` pin function setting issues
+- Corrected MicroPython HAL TX data errors
+
+#### **RT-Smart**
+- Fixed RTL8189 AP mode issues
+- Resolved I2C transfer timeout problems
+
+## v1.3-RC1
+
+Initial release candidate for version 1.3 with significant enhancements across all components.
+
+### New Features
+#### **CanMV**
+- Enhanced display capabilities
+- Updated MicroPython port with additional modules
+- Improved hardware abstraction layer
+
+#### **MPP**
+- Added IDR frame request interface (`kd_mapi_venc_request_idr`)
+- Improved image flip and mirror functionality
+
+#### **RT-Smart**
+- Optimized task scheduling and memory management
+- Expanded peripheral support (SPI, I2C)
+- Filesystem reliability improvements
+
+#### **U-Boot**
+- Added support for `k230d_evb` board
+- Optimized boot process
+
+#### **New Component**
+- Introduced `k230_rtsmart_lib` runtime support library
+
 ## v1.2.2
 
 Version 1.2.2 introduces minor bug fixes and new features to enhance functionality and performance.
@@ -20,7 +67,7 @@ Version 1.2.2 introduces minor bug fixes and new features to enhance functionali
 - Resolved an issue where the MTP could not monitor the `data` partition effectively.
 
 #### **CanMV**
-- Fixed a bug that caused sensor snapshot failures when the sensor chaneel was bind to display.
+- Fixed a bug that caused sensor snapshot failures when the sensor channel was bound to display.
 
 ## v1.2.1
 
@@ -30,7 +77,7 @@ Version 1.2.1 is a minor bug fix for v1.2
 
 - **CanMV**:
   - Fix sensor and display release vb, now can remove try and catch block
-  - Fix machie.I2C
+  - Fix machine.I2C
 
 ## v1.2
 

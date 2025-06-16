@@ -1,39 +1,70 @@
-<img height=230 src="https://github.com/kendryte/k230_canmv/blob/main/images/CanMV_logo_800x260.png">
+# K230 RTOS Only SDK 开发指南
 
-**CanMV, 让 AIOT 更简单～**
+## 概述
 
-CanMV 的目的是让 AIOT 编程更简单， 基于 [Micropython](http://www.micropython.org) 语法, 运行在[Canaan](https://www.canaan-creative.com/)强大的嵌入式AI SOC系列上。目前它在K230上运行。
+K230 RTOS Only SDK 是基于K230芯片和RT-Smart实时操作系统的软件开发套件，提供完整的开发环境和工具链，帮助开发者快速构建嵌入式应用。CanMV_K230项目是本SDK的典型应用案例，通过MicroPython框架简化了硬件评估和原型开发流程。
 
-## 镜像下载
+## 获取镜像
 
-1. **[PreRelease](https://github.com/kendryte/canmv_k230/releases/tag/PreRelease)**: 开发分支自动编译生成镜像，供测试使用，尽保留最新版本
+### 每日构建版本
+- **下载地址**: [Daily Build镜像](https://kendryte-download.canaan-creative.com/developer/releases/canmv_k230_micropython/daily_build/)
+- **特点**:
+  - 自动构建的开发分支最新版本
+  - 适合测试和尝鲜使用
+  - 仅保留最新构建版本
 
-2. 预编译release镜像：请访问[嘉楠开发者社区](https://developer.canaan-creative.com/resource), 然后在`K230/Images`分类中，下载镜像文件名包含`micropython`的文件，并烧录至SD卡中。(镜像文件名格式：`*_micropython_*.img.gz`)
+### 稳定发布版本
+- **获取方式**:
+  1. 访问[嘉楠开发者社区资源中心](https://developer.canaan-creative.com/resource)
+  2. 在`K230/Images`分类中查找
+  3. 下载文件名包含`RTSmart`的镜像文件（格式示例：`RtSmart_*.img.gz`）
 
-> 下载的镜像默认为`.gz`压缩格式，需先解压缩，然后再烧录。
+> **注意**: 下载的镜像为gzip压缩格式，使用前需先解压
 
-> micropython镜像与K230 SDK镜像所支持的功能并不相同，请勿下载K230 SDK镜像来使用micropython
+## 快速入门
 
-## 快速开始
+### 镜像编译指南
 
-### 自行编译镜像
+我们提供两种编译方式供选择：
 
-参考[BUILD](BUILD.md)，可使用`Dokcer`或本地环境编译，编译速度更快
+**方法一：使用Docker环境（推荐）**
+- 优势：环境隔离，依赖完整
+- 参考文档：[BUILD编译指南](BUILD.md)
 
-或者参考[K230 CanMV 自定义固件](https://developer.canaan-creative.com/k230_canmv/main/zh/userguide/how_to_build.html)
+**方法二：本地环境编译**
+- 优势：编译速度更快
+- 系统要求：Ubuntu 20.04/22.04 LTS
 
-### 烧录
+详细步骤请参考：
+[K230 RTOS 自定义固件编译教程](https://www.kendryte.com/k230_rtos/zh/main/userguide/how_to_build.html)
 
-linux下直接使用dd命令进行烧录，windows下使用烧录工具进行烧录，可参考[K230 CanMV 如何烧录固件](https://developer.canaan-creative.com/k230_canmv/main/zh/userguide/how_to_burn_firmware.html)
+### 镜像烧录方法
 
-## 贡献指南
+**Linux系统**:
+```bash
+dd if=镜像文件 of=/dev/sdX bs=1M status=progress
+```
 
-如果您对本项目感兴趣，想要反馈问题或提交代码，请参考[CONTRIBUTING](CONTRIBUTING.md)
+**Windows系统**:
+- 推荐使用专业烧录工具
+- 操作指南：[K230 CanMV 固件烧录教程](https://www.kendryte.com/k230_rtos/zh/main/userguide/how_to_flash.html)
 
-## 联系我们
+## 贡献与支持
 
-北京嘉楠捷思信息技术有限公司
+### 参与贡献
+我们欢迎各种形式的贡献，包括但不限于：
+- 问题反馈
+- 文档改进
+- 代码提交
 
-网址:[www.canaan-creative.com](https://www.canaan-creative.com/)
+请阅读[贡献指南](CONTRIBUTING.md)了解详细流程。
 
-商务垂询:[salesAI@canaan-creative.com](salesAI@canaan-creative.com)
+### 技术支持
+**北京嘉楠捷思信息技术有限公司**  
+官网：[www.canaan-creative.com](https://www.canaan-creative.com/)  
+技术支持邮箱：[support@canaan-creative.com](mailto:support@canaan-creative.com)  
+商务合作：[salesAI@canaan-creative.com](mailto:salesAI@canaan-creative.com)
+
+---
+
+> **提示**：建议开发者定期关注[官方GitHub仓库](https://github.com/kendryte/canmv_k230)获取最新更新和安全补丁。
