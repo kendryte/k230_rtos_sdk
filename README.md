@@ -15,7 +15,7 @@ K230 RTOS Only SDK 是基于K230芯片和RT-Smart实时操作系统的软件开�
 
 ### 稳定发布版本
 - **获取方式**:
-  1. 访问[嘉楠开发者社区资源中心](https://developer.canaan-creative.com/resource)
+  1. 访问[嘉楠开发者社区资源中心](https://www.kendryte.com/resource)
   2. 在`K230/Images`分类中查找
   3. 下载文件名包含`RTSmart`的镜像文件（格式示例：`RtSmart_*.img.gz`）
 
@@ -61,10 +61,10 @@ dd if=镜像文件 of=/dev/sdX bs=1M status=progress
 
 ### 技术支持
 **北京嘉楠捷思信息技术有限公司**  
-官网：[www.canaan-creative.com](https://www.canaan-creative.com/)  
+网址:[www.kendryte.com](https://www.kendryte.com/)
 技术支持邮箱：[support@canaan-creative.com](mailto:support@canaan-creative.com)  
 商务合作：[salesAI@canaan-creative.com](mailto:salesAI@canaan-creative.com)
 
 ---
 
-> **提示**：建议开发者定期关注[官方GitHub仓库](https://github.com/kendryte/canmv_k230)获取最新更新和安全补丁。
+> **提示**：建议开发者定期关注[官方GitHub仓库](https://github.com/kendryte/k230_rtos_sdk)获取最新更新和安全补丁。
