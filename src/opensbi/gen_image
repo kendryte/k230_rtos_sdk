@@ -5,20 +5,60 @@ source ${SDK_TOOLS_DIR}/gen_image_func.sh
 
 OPENSBI_IMAGE_DIR=${SDK_BUILD_IMAGES_DIR}/opensbi/
 
+# Calculate addresses
+SDK_FW_JUMP_ADDR=$((CONFIG_MEM_RTSMART_BASE + CONFIG_RTSMART_OPENSIB_MEMORY_SIZE))
+
 gen_rtt_bin()
 {
-    local filename=opensbi.bin
-    local install_filename=${OPENSBI_IMAGE_DIR}/opensbi_rtt_system.bin
+    local filename="${SDK_OPENSBI_BUILD_DIR}/opensbi.bin"
+    local install_filename="${OPENSBI_IMAGE_DIR}/opensbi_rtt_system.bin"
 
-	[ ! -e "${OPENSBI_IMAGE_DIR}" ] && mkdir -p ${OPENSBI_IMAGE_DIR}
-    cd ${OPENSBI_IMAGE_DIR}
+    [ ! -e "$OPENSBI_IMAGE_DIR" ] && mkdir -p "$OPENSBI_IMAGE_DIR"
+    pushd "$OPENSBI_IMAGE_DIR" >/dev/null
 
-	bin_gzip_ubootHead_firmHead "${SDK_OPENSBI_BUILD_DIR}/${filename}" "-O opensbi -T multi -a ${CONFIG_MEM_BASE_ADDR} -e ${CONFIG_MEM_BASE_ADDR} -n rtt"
+    if [ "$CONFIG_OPENSBI_USE_PREBUILT_FW_JUMP" = "y" ]; then
+        # For FW_JUMP mode
+        local fw_jump_path="${SDK_OPENSBI_BUILD_DIR}/opensbi_fw_jump.bin"
+        local rtthread_path="${SDK_OPENSBI_BUILD_DIR}/rtthread.bin"
 
-	mv fn_ug_${filename} ${install_filename}
-	chmod a+r ${install_filename}
+        if [ ! -f "$fw_jump_path" ]; then
+            echo "Error: Prebuilt FW_JUMP binary not found at $fw_jump_path"
+            exit 1
+        fi
 
-    cd -
+        if [ ! -f "$rtthread_path" ]; then
+            echo "Error: RT-Thread binary not found at $rtthread_path"
+            exit 1
+        fi
+
+        # Calculate required padding
+        FW_JUMP_SIZE=$(stat -c%s "$fw_jump_path")
+        PADDING_SIZE=$((SDK_FW_JUMP_ADDR - CONFIG_MEM_BASE_ADDR - FW_JUMP_SIZE))
+
+        if [ $PADDING_SIZE -lt 0 ]; then
+            echo "Error: OpenSBI binary too large for reserved space"
+            exit 1
+        fi
+
+        # Create properly aligned combined image with 1024-byte blocks
+        # 1. Create base file with FW_JUMP
+        dd if="$fw_jump_path" of="$filename" bs=1024 conv=notrunc >/dev/null 2>&1
+
+        # 2. Extend file to required size (faster than writing zeros)
+        truncate -s $((SDK_FW_JUMP_ADDR - CONFIG_MEM_BASE_ADDR)) "$filename"
+
+        # 3. Insert RT-Thread at exact offset
+        dd if="$rtthread_path" of="$filename" bs=1024 \
+           seek=$(( (SDK_FW_JUMP_ADDR - CONFIG_MEM_BASE_ADDR) / 1024 )) \
+           conv=notrunc >/dev/null 2>&1
+    fi
+
+    bin_gzip_ubootHead_firmHead "${filename}" "-O opensbi -T multi -a $CONFIG_MEM_BASE_ADDR -e $CONFIG_MEM_BASE_ADDR -n rtt"
+
+    mv "fn_ug_$(basename ${filename})" "$install_filename"
+    chmod a+r "$install_filename"
+
+    popd >/dev/null
 }
 
-gen_rtt_bin;
+gen_rtt_bin

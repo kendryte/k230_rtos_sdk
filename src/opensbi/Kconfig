@@ -7,5 +7,14 @@ menu "Opensbi Configuration"
         default 0x91402000 if RTT_CONSOLE_UART2
         default 0x91403000 if RTT_CONSOLE_UART3
         default 0x91404000 if RTT_CONSOLE_UART4
+    
+    menuconfig OPENSBI_USE_PREBUILT_FW_JUMP
+        bool "OpenSBI Use Prebuilt FW Jump"
+        default n
 
+        if OPENSBI_USE_PREBUILT_FW_JUMP
+            config OPENSBI_PREBUILT_FW_JUMP_PATH
+                string "Prebuilt FW Jump Path (under board folder)"
+                default "opensbi_fw_jump.bin"
+        endif
 endmenu
