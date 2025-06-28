@@ -1,9 +1,13 @@
 #!/bin/bash
 
+set -euo pipefail  # Enable strict error handling
+
 source ${SDK_SRC_ROOT_DIR}/.config
 source ${SDK_TOOLS_DIR}/gen_image_func.sh
 
 OPENSBI_IMAGE_DIR=${SDK_BUILD_IMAGES_DIR}/opensbi/
+
+CONFIG_OPENSBI_USE_PREBUILT_FW_JUMP="${CONFIG_OPENSBI_USE_PREBUILT_FW_JUMP:-n}"
 
 # Calculate addresses
 SDK_FW_JUMP_ADDR=$((CONFIG_MEM_RTSMART_BASE + CONFIG_RTSMART_OPENSIB_MEMORY_SIZE))

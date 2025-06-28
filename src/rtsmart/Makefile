@@ -45,7 +45,7 @@ endif
 
 .PHONY: kernel
 kernel: .parse_config
-	@$(SDK_SRC_ROOT_DIR)/tools/gen_verinfo_h.sh $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3/sdk_version.h
+	@$(SDK_TOOLS_DIR)/gen_verinfo_h.sh $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3/sdk_version.h
 	@export RTT_CC=gcc; \
 	export RTT_CC_PREFIX=$(CROSS_COMPILE_PREFIX); \
 	export RTT_EXEC_PATH=$(CROSS_COMPILE_DIR); \
@@ -64,13 +64,13 @@ mpp:
 	export MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp; \
 	export RTSMART_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/rtsmart; \
 	export MPP_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR)/mpp; \
-	$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/kernel || exit $?; \
-	$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/userapps/src || exit $?; \
-	$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/middleware/src || exit $?; \
+	$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/kernel -j$(NCPUS) || exit $?; \
+	$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/userapps/src -j$(NCPUS) || exit $?; \
+	$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/middleware/src -j$(NCPUS) || exit $?; \
 
 .PHONY: libs
 libs:
-	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/libs all || exit $?;
+	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/libs -j$(NCPUS) all || exit $?;
 
 .PHONY: examples
 examples:
@@ -81,7 +81,7 @@ ifeq ($(CONFIG_MPP_ENABLE_USERAPPS_SAMPLES),y)
 	export MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp; \
 	export RTSMART_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/rtsmart; \
 	export MPP_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR)/mpp; \
-	$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/userapps/sample || exit $?;
+	$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/userapps/sample -j$(NCPUS) all || exit $?;
 endif
 
 ifeq ($(CONFIG_MPP_ENABLE_MIDDLEWARE_SAMPLES),y)
@@ -89,11 +89,11 @@ ifeq ($(CONFIG_MPP_ENABLE_MIDDLEWARE_SAMPLES),y)
 	export MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp; \
 	export RTSMART_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/rtsmart; \
 	export MPP_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR)/mpp; \
-	$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/middleware/sample || exit $?;
+	$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/middleware/sample -j$(NCPUS) all || exit $?;
 endif
 
 ifeq ($(CONFIG_RTT_ENABLE_BUILD_EXAMPLES),y)
-	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/examples all || exit $?;
+	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/examples -j$(NCPUS) all || exit $?;
 endif
 
 endif

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+CONFIG_GEN_SECURITY_IMG="${CONFIG_GEN_SECURITY_IMG:-n}"
+
 add_firmHead()
 {
 	local filename="$1"
@@ -30,11 +32,10 @@ k230_gzip()
 
 bin_gzip_ubootHead_firmHead()
 {
-	local mkimage="${SDK_UBOOT_BUILD_DIR}/tools/mkimage"
+	local mkimage="${SDK_TOOLS_DIR}/mkimage"
 	local file_full_path="$1"
 	local filename=$(basename ${file_full_path})
 	local mkimgArgs="$2"
-	local firmArgs="$3"
 
 	[ "$(dirname ${file_full_path})" == "$(pwd)" ] || cp ${file_full_path} .
 

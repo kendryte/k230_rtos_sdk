@@ -35,7 +35,7 @@ gen_image()
 	local image="$2";
 
 	GENIMAGE_TMP="genimage.tmp"; rm -rf "${GENIMAGE_TMP}";
-	GENIMAGE_MKUFFS=${SDK_SRC_ROOT_DIR}/tools/mkuffs ${TOOL_GENIMAGE} --rootpath "${SDK_BUILD_IMAGES_DIR}" --tmppath "${GENIMAGE_TMP}" --inputpath "${SDK_BUILD_IMAGES_DIR}" --outputpath "${SDK_BUILD_DIR}" --config "${config}"
+	GENIMAGE_MKUFFS=${SDK_TOOLS_DIR}/mkuffs ${TOOL_GENIMAGE} --rootpath "${SDK_BUILD_IMAGES_DIR}" --tmppath "${GENIMAGE_TMP}" --inputpath "${SDK_BUILD_IMAGES_DIR}" --outputpath "${SDK_BUILD_DIR}" --config "${config}"
 
     rm -rf "${GENIMAGE_TMP}";
     # Find the generated image file (could be .img or .kdimg)

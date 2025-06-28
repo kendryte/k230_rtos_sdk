@@ -42,10 +42,12 @@ endef
 # so that IDEs/editors are able to understand relative filenames.
 MAKEFLAGS += --no-print-directory
 
-JOBS := $(shell ps -o args= $(MAKEPPID) | grep -o -E -- '-j[0-9]+' | head -n 1 | cut -c3-)
-ifneq ($(JOBS),)
-  ifneq ($(JOBS),1)
-    $(error not support parallel build now)
+ifneq ($(MKENV_INCLUDED),1)
+  JOBS := $(shell ps -o args= $(MAKEPPID) | grep -o -E -- '-j[0-9]+' | head -n 1 | cut -c3-)
+  ifneq ($(JOBS),)
+    ifneq ($(JOBS),1)
+      $(error not support parallel build now)
+    endif
   endif
 endif
 

@@ -1,45 +1,140 @@
 #!/bin/bash
+set -euo pipefail  # Enable strict error handling
 
-source ${SDK_SRC_ROOT_DIR}/.config
-source ${SDK_TOOLS_DIR}/gen_image_func.sh
+# Configuration and logging setup
+LOG_FILE="${SDK_BUILD_IMAGES_DIR}/uboot_build.log"
+exec > >(tee -a "$LOG_FILE") 2>&1  # Log all output
 
-UBOOT_IMAGE_DIR=${SDK_BUILD_IMAGES_DIR}/uboot/
-BOARD_UBOOT_ENV_FILE=${SDK_BOARD_DIR}/${CONFIG_UBOOT_ENV_FILE}
+echo "=== U-Boot Image Generation Script ==="
+date
 
-copy_env_file()
-{
-	# copy env to images dir
-	[ ! -e "${BOARD_UBOOT_ENV_FILE}" ] && echo "uboot env file not exist." && exit 1;
-	[ ! -e "${UBOOT_IMAGE_DIR}" ] && mkdir -p ${UBOOT_IMAGE_DIR}
-	cp -f ${BOARD_UBOOT_ENV_FILE} ${UBOOT_IMAGE_DIR}/uboot.env
+# Source configuration files safely
+config_files=(
+    "${SDK_SRC_ROOT_DIR}/.config"
+    "${SDK_TOOLS_DIR}/gen_image_func.sh"
+)
+
+for config in "${config_files[@]}"; do
+    if [[ ! -f "$config" ]]; then
+        echo "ERROR: Config file not found: $config" >&2
+        exit 1
+    fi
+    source "$config"
+done
+
+# Directory setup
+UBOOT_IMAGE_DIR="${SDK_BUILD_IMAGES_DIR}/uboot"
+BOARD_UBOOT_ENV_FILE="${SDK_BOARD_DIR}/${CONFIG_UBOOT_ENV_FILE}"
+
+# Create directories if they don't exist
+mkdir -p "$UBOOT_IMAGE_DIR"
+
+get_uboot_text_base() {
+    local config_file="${SDK_UBOOT_BUILD_DIR}/.config"
+    local text_base="${CONFIG_SYS_TEXT_BASE:-0x80000000}"  # Fallback to default
+
+    if [[ -f "$config_file" ]]; then
+        if grep -q '^CONFIG_SYS_TEXT_BASE=' "$config_file"; then
+            text_base=$(grep '^CONFIG_SYS_TEXT_BASE=' "$config_file" | cut -d'=' -f2 | tr -d '"')
+            if ! printf '%d' "$text_base" &>/dev/null; then
+                echo "WARNING: Invalid CONFIG_SYS_TEXT_BASE, using default ${text_base}" >&2
+                text_base="0x80000000"
+            fi
+        else
+            echo "WARNING: CONFIG_SYS_TEXT_BASE not found in .config, using default ${text_base}" >&2
+        fi
+    else
+        echo "WARNING: U-Boot .config not found, using default text base ${text_base}" >&2
+    fi
+
+    echo "$text_base"
 }
 
-gen_env_bin()
-{
-	local mkenvimage="${SDK_UBOOT_BUILD_DIR}/tools/mkenvimage"
-	${mkenvimage} -s 0x10000 -o ${UBOOT_IMAGE_DIR}/env.bin ${BOARD_UBOOT_ENV_FILE}
+copy_env_file() {
+    echo "Copying U-Boot environment file..."
+    
+    if [[ ! -f "$BOARD_UBOOT_ENV_FILE" ]]; then
+        echo "ERROR: U-Boot env file not found: $BOARD_UBOOT_ENV_FILE" >&2
+        exit 1
+    fi
+
+    if ! cp -v "$BOARD_UBOOT_ENV_FILE" "${UBOOT_IMAGE_DIR}/uboot.env"; then
+        echo "ERROR: Failed to copy environment file" >&2
+        exit 1
+    fi
 }
 
-gen_uboot_bin()
-{
-	source ${SDK_UBOOT_BUILD_DIR}/.config
+gen_env_bin() {
+    local mkenvimage="${SDK_TOOLS_DIR}/mkenvimage"
+    local env_bin="${UBOOT_IMAGE_DIR}/env.bin"
 
-	UBOOT_TEXT_BASE="${CONFIG_SYS_TEXT_BASE}"
+    echo "Generating environment binary..."
+    
+    if [[ ! -x "$mkenvimage" ]]; then
+        echo "ERROR: mkenvimage not found or not executable: $mkenvimage" >&2
+        exit 1
+    fi
 
+    if ! "$mkenvimage" -s 0x10000 -o "$env_bin" "$BOARD_UBOOT_ENV_FILE"; then
+        echo "ERROR: Failed to generate environment binary" >&2
+        exit 1
+    fi
 
-    cd ${UBOOT_IMAGE_DIR}
-
-	bin_gzip_ubootHead_firmHead ${SDK_UBOOT_BUILD_DIR}/u-boot.bin "-O u-boot -T firmware -a ${UBOOT_TEXT_BASE} -e ${UBOOT_TEXT_BASE} -n uboot"
-
-	cp ${SDK_UBOOT_BUILD_DIR}/spl/u-boot-spl.bin .
-	add_firmHead u-boot-spl.bin
-
-	${SDK_UBOOT_SRC_DIR}/uboot/tools/endian-swap.py fn_u-boot-spl.bin swap_fn_u-boot-spl.bin
-
-	rm -rf u-boot-spl.bin
-	cd -
+    echo "Environment binary generated: $env_bin"
 }
 
-copy_env_file;
-gen_env_bin;
-gen_uboot_bin;
+gen_uboot_bin() {
+    local UBOOT_TEXT_BASE
+    UBOOT_TEXT_BASE=$(get_uboot_text_base)
+    
+    echo "Generating U-Boot binary with text base: $UBOOT_TEXT_BASE"
+
+    pushd "$UBOOT_IMAGE_DIR" >/dev/null
+
+    # Verify input files exist
+    local uboot_bin="${SDK_UBOOT_BUILD_DIR}/u-boot.bin"
+    local spl_bin="${SDK_UBOOT_BUILD_DIR}/spl/u-boot-spl.bin"
+    
+    [[ ! -f "$uboot_bin" ]] && { echo "ERROR: u-boot.bin not found" >&2; exit 1; }
+    [[ ! -f "$spl_bin" ]] && { echo "ERROR: u-boot-spl.bin not found" >&2; exit 1; }
+
+    # Process main U-Boot binary
+    if ! bin_gzip_ubootHead_firmHead "$uboot_bin" \
+        "-O u-boot -T firmware -a ${UBOOT_TEXT_BASE} -e ${UBOOT_TEXT_BASE} -n uboot"; then
+        echo "ERROR: Failed to process u-boot.bin" >&2
+        exit 1
+    fi
+
+    # Process SPL binary
+    if ! cp "$spl_bin" .; then
+        echo "ERROR: Failed to copy SPL binary" >&2
+        exit 1
+    fi
+
+    if ! add_firmHead u-boot-spl.bin; then
+        echo "ERROR: Failed to add firmware header to SPL" >&2
+        exit 1
+    fi
+
+    if ! "${SDK_TOOLS_DIR}/endian-swap.py" fn_u-boot-spl.bin swap_fn_u-boot-spl.bin; then
+        echo "ERROR: Failed to endian-swap SPL" >&2
+        exit 1
+    fi
+
+    rm -f u-boot-spl.bin
+    popd >/dev/null
+
+    echo "U-Boot binaries generated successfully"
+}
+
+# Main execution
+main() {
+    echo "Starting U-Boot image generation..."
+    copy_env_file
+    gen_env_bin
+    gen_uboot_bin
+    echo "U-Boot image generation completed successfully"
+    date
+}
+
+main

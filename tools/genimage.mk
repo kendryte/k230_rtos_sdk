@@ -4,7 +4,7 @@ export TOOL_GENIMAGE=${SDK_TOOLS_DIR}/genimage/genimage
 # https://github.com/pengutronix/genimage/releases/download/v18/genimage-18.tar.xz
 
 ${SDK_TOOLS_DIR}/genimage/genimage:
-	@cd $(SDK_TOOLS_DIR)/genimage && chmod +x autogen.sh && ./autogen.sh && ./configure && make && cd -
+	@cd $(SDK_TOOLS_DIR)/genimage && chmod +x autogen.sh && ./autogen.sh && ./configure && make -j$(NCPUS) && cd -
 
 .PHONY: $(TOOL_GENIMAGE)-clean
 $(TOOL_GENIMAGE)-clean:
