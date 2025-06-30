@@ -109,6 +109,6 @@ while IFS= read -r project; do
     process_project
     echo "----------------------------------------"
   )
-done < <(~/.bin/repo list --group sdk,canmv -p)
+done < <(~/.bin/repo list --group sdk -p)
 
 echo -e "\nTagging completed for all subprojects."

@@ -7,7 +7,7 @@ on:
         description: 'The config list which will compiled'
         required: false
         type: string
-        default: "k230_canmv_01studio_defconfig k230_canmv_v1p0p1_defconfig k230_canmv_dongshanpi_defconfig k230_canmv_lckfb_defconfig k230_canmv_v3p0_defconfig k230d_canmv_bpi_zero_defconfig k230d_canmv_atk_dnk230d_defconfig k230_canmv_dongshanpi_defconfig"
+        default: "k230_rtos_01studio_defconfig k230_rtos_aihardware_defconfig k230_rtos_evb_defconfig k230_rtos_evb_spinand_defconfig k230_rtos_lckfb_defconfig"
 
 jobs:
   build:
@@ -40,7 +40,7 @@ jobs:
         run: |
           rm -rf *
           ls -alh
-          ~/.bin/repo init -u git@github.com:canmv-k230/manifest.git
+          ~/.bin/repo init -u git@github.com:canmv-k230/manifest.git -m rtsmart.xml
           ~/.bin/repo sync
 
       - name: Prepare Environment
@@ -58,6 +58,9 @@ jobs:
           make dl_toolchain
 
       - name: Build Projects
+        env:
+          IS_CI: 1
+          CONFIGS: ${{ inputs.configs }}
         run: |
           source ~/.canmv_venv/bin/activate
           projects=($CONFIGS)
@@ -70,9 +73,6 @@ jobs:
             time make log
             echo "-------------------"
           done
-        env:
-          IS_CI: 1
-          CONFIGS: ${{ inputs.configs }}
 
       - name: Set Env
         run: |
