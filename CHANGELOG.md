@@ -1,186 +1,113 @@
-# CanMV K230 Changelog
+# RTOS Only K230 Changelog
 
-## v1.3
+## 🚀 RTOS Only K230 `rtos-v0.5` Release Notes
 
-Version 1.3 introduces new image format support and build system improvements.
+We are excited to announce the **rtos-v0.5** release of the CanMV K230 platform — a major milestone focused on **RT-Thread-based development**, board enablement, and driver refactoring. This release includes extensive improvements across all core components and new board support, making it ideal for real-time and embedded scenarios.
 
-### Project Updates
-- Added new `kdimg` image format support via genimage updates
+---
 
-## v1.3-RC2
+### 🧠 CanMV Core Platform
 
-Release candidate 2 for version 1.3 brings important fixes and stability improvements.
+While this release primarily targets RT-Thread integration, it builds on top of the stable `canmv-v1.3` release. For foundational changes, see the [v1.3 release notes](https://github.com/kendryte/canmv_k230/releases/tag/v1.3).
 
-### Bug Fixes
-#### **CanMV**
-- Fixed `machine.I2C` module error handling
-- Resolved `machine.FPIOA` pin function setting issues
-- Corrected MicroPython HAL TX data errors
+---
 
-#### **RT-Smart**
-- Fixed RTL8189 AP mode issues
-- Resolved I2C transfer timeout problems
+### ⚙️ RT-Smart OS
 
-## v1.3-RC1
+* **Board Support**:
 
-Initial release candidate for version 1.3 with significant enhancements across all components.
+  * Added support for `rtt_evb` and `junroc` boards.
+* **UART Improvements**:
 
-### New Features
-#### **CanMV**
-- Enhanced display capabilities
-- Updated MicroPython port with additional modules
-- Improved hardware abstraction layer
+  * Enabled fractional baud rate divisor (DLF) for better accuracy.
+  * Refactored UART driver to use RT-Thread serial framework.
+  * Improved `putc()` timeout logic.
+* **Touch & Peripheral Drivers**:
 
-#### **MPP**
-- Added IDR frame request interface (`kd_mapi_venc_request_idr`)
-- Improved image flip and mirror functionality
+  * Added FT5406 touch panel driver.
+  * Added initial pinmux module and config updates.
+  * Refactored `drv_pwm` and `drv_rtc`, improved reliability.
+* **System Improvements**:
 
-#### **RT-Smart**
-- Optimized task scheduling and memory management
-- Expanded peripheral support (SPI, I2C)
-- Filesystem reliability improvements
+  * Better default driver/component init levels.
+  * Enhanced NTP time sync handling.
+  * Fixed boot failure issues on `evb` board.
+  * OSPI fixes for chip select handling.
+* **Code Cleanup**:
 
-#### **U-Boot**
-- Added support for `k230d_evb` board
-- Optimized boot process
+  * Reverted unintentional RTC defaults.
+  * Merged multiple dev branches for platform stabilization.
 
-#### **New Component**
-- Introduced `k230_rtsmart_lib` runtime support library
+[🔗 Full Changelog](https://github.com/canmv-k230/rtsmart/compare/canmv-v1.3...rtos-v0.5)
 
-## v1.2.2
+---
 
-Version 1.2.2 introduces minor bug fixes and new features to enhance functionality and performance.
+### 📦 k230\_rtsmart\_lib
 
-### New Features
+* **New HAL Drivers**:
 
-#### **RT-Smart**
-- Enhanced the `tsensor` driver with mutex support for improved concurrency and stability.
+  * Added new UART, SPI, PWM, GPIO, FPIOA, WDT, and SBUS HAL drivers.
+  * External SPI CS pin control supported.
+* **Test Infrastructure**:
 
-#### **CanMV**
-- Added support for a new MIPI panel with a resolution of 368x552.
-- Introduced the `machine.chipid` and `machine.temperature` APIs for accessing unique device identifiers and temperature data.
-- Implemented `os.urandom` for generating random bytes and `os.statvfs` for retrieving filesystem statistics.
+  * Introduced test cases for SPI (ST7789), GPIO, SBUS, timers, and FPIOA.
+* **Fixes & Improvements**:
 
-### Bug Fixes
+  * Fixed crash caused by invalid GPIO instance.
+  * Fixed FPIOA bugs and driver warnings.
+  * Added face\_liveness.kmodel as part of the testing set.
 
-#### **RT-Smart**
-- Resolved an issue where the MTP could not monitor the `data` partition effectively.
+[🔗 Full Changelog](https://github.com/canmv-k230/k230_rtsmart_lib/compare/canmv-v1.3...rtos-v0.5)
 
-#### **CanMV**
-- Fixed a bug that caused sensor snapshot failures when the sensor channel was bound to display.
+---
 
-## v1.2.1
+### 🎥 MPP (Media Processing Platform)
 
-Version 1.2.1 is a minor bug fix for v1.2
+* **Display Support**:
 
-### Bug Fixes
+  * Added driver for NT35516 display.
+* **Sensor Fixes**:
 
-- **CanMV**:
-  - Fix sensor and display release vb, now can remove try and catch block
-  - Fix machine.I2C
+  * Fixed GC2093 sensor configuration issues.
+* **RTT Compatibility**:
 
-## v1.2
+  * Improved build config for RT-Smart-based systems.
 
-Version 1.2 brings several new features, improvements, and bug fixes to the project. This update focuses on RTOS support, new hardware support, and various enhancements across the CanMV, RT-Smart, MPP, and U-Boot components.
+[🔗 Full Changelog](https://github.com/canmv-k230/mpp/compare/canmv-v1.3...rtos-v0.5)
 
-### Project Updates
+---
 
-- **RTOS Only SDK**: Added support for RTOS-only SDK build sample code and AI demo compile support.
-- **New Board Support**: Added support for board **ATK-DNK230D**.
+### 🛠️ U-Boot Bootloader
 
-### New Features
+* **Board Support**:
 
-- **CanMV**:
-  - Added **soft I2C support** for software-driven I2C communication.
-  - Added **SPI LCD driver** support for SPI-based LCD displays.
-  - Integrated **Audio 3A support** for improved audio processing.
-  - Expanded **hardware support** with new boards, including **ATK-DNK230D**.
-  - Added **MIPI DSI debugger support** for debugging MIPI DSI displays.
-  - Introduced new **machine.TOUCH module** for touchscreen functionality.
-  - New board type format added to display **board memory size**.
+  * Added support for `rtt_evb` and `junroc` boards.
+* **RTOS Integration**:
 
-- **RT-Smart**:
-  - Added **dynamic memory size detection** support.
-  - Integrated support for **4G module (EC200M)**.
-  - Added **probe support for touch devices**, including a new driver for **CHCS5XXX**.
-  - Introduced **FPIOA driver** for flexible I/O array support.
-  - Added **USB host split** support.
-  - Improved project structure to allow users to **specify custom app folder**.
-  - Added support for **resizing GPT partitions**.
+  * Added support for building and pushing prebuilt U-Boot images to `k230_rtos_sdk`.
+* **Driver Improvements**:
 
-- **MPP**:
-  - Added **MIPI DSI debugger support** for debugging MIPI DSI displays.
-  - Added support for new **sensor models (bf3238, sc132gs)**.
-  - Added support for new **2.4-inch, 480x640 LCD** display.
-  - Added **build sample support** for MPP.
+  * Updated SDHCI driver for better stability.
 
-- **U-Boot**:
-  - Added **dynamic memory size detection**.
-  - Integrated support for new **boards** including **ATK-DNK230D**.
-  - Enhanced **Kburn OTP support**.
+[🔗 Full Changelog](https://github.com/canmv-k230/u-boot/compare/canmv-v1.3...rtos-v0.5)
 
-### Bug Fixes
+---
 
-- **CanMV**:
-  - Fixed **sensor MCM mode error**.
-  - Fixed **LVGL pixel format** handling issue.
-  - Resolved **SPI driver** issues.
-  - Fixed **UART driver** communication problems.
-  - Corrected **machine.PWM duty** cycle error.
-  - Fixed **NN image inference error**.
+### 📈 Full Changelog
 
-- **RT-Smart**:
-  - Fixed issues with **SPI driver**.
-  - Corrected **I2C driver** issues.
-  - Resolved **UART driver** bugs.
-  - Fixed **CherryUSB** functionality.
+| Repository       | Compare Link                                                                                            |
+| ---------------- | ------------------------------------------------------------------------------------------------------- |
+| **rtsmart**      | [canmv-v1.3...rtos-v0.5](https://github.com/canmv-k230/rtsmart/compare/canmv-v1.3...rtos-v0.5)          |
+| **rtsmart\_lib** | [canmv-v1.3...rtos-v0.5](https://github.com/canmv-k230/k230_rtsmart_lib/compare/canmv-v1.3...rtos-v0.5) |
+| **mpp**          | [canmv-v1.3...rtos-v0.5](https://github.com/canmv-k230/mpp/compare/canmv-v1.3...rtos-v0.5)              |
+| **u-boot**       | [canmv-v1.3...rtos-v0.5](https://github.com/canmv-k230/u-boot/compare/canmv-v1.3...rtos-v0.5)           |
 
-- **MPP**:
-  - Fixed **sensor register configuration** for **GC2093**, **OV5647**, and **IMX335**.
-  - Fixed **LCD timing** for 3.5-inch 480x800 ST7701 display.
+---
 
-## v1.1
+### 📝 Summary
 
-Version 1.1 is a complete overhaul for the K230 platform, designed to be more user-friendly and development-oriented.
+The `rtos-v0.5` release focuses on transitioning the CanMV K230 platform toward **real-time RTOS workflows**. It introduces new drivers, boards, HAL libraries, and debugging infrastructure essential for embedded systems work. This sets the stage for future development with tight real-time constraints and modular software stacks.
 
-### Project Updates
+We encourage developers working with RT-Thread to upgrade and try out the new platform capabilities.
 
-- **Repo Management**: Subprojects are now managed with `repo`.
-- **Dependencies**: Linux dependencies have been removed.
-- **Build System**: Introduction of a new compilation system.
-- **Board Support**: Added support for new boards, including DonshanPI, LCKFB, and others.
-
-### New Features
-
-- **CanMV**:
-  - Added support for WS2812 LEDs via GPIO.
-  - Network support: Ethernet and Wi-Fi.
-  - New board support: DonshanPI, LCKFB, etc.
-  - Added support for a new display panel: ILI9806.
-  - Audio module update: Added volume control capabilities.
-  
-- **RT-Smart**:
-  - Automatic partition creation and mounting to `/data`.
-  - Project management via Kconfig.
-  - Added support for WS2812 LEDs via GPIO.
-  - Added support for I2C slave mode.
-  - Ethernet-over-USB support with RTL8152.
-  - WLAN support: RTL8189 and CYW43xx.
-  - Added support for NTP (Network Time Protocol).
-
-- **MPP (Multi-Processor Platform)**:
-  - Sensor driver framework updated, now support GC2093, OV5647, and IMX335.
-  - Updated screen driver framework.
-
-- **U-Boot**:
-  - New `kburn` tool, no longer dependent on DRAM.
-  - Added support for new boards: DonshanPI, LCKFB, and more.
-
-### Bug Fixes
-
-- **CanMV**:
-  - Fixed IOMUX pins (36, 37).
-  - Released UART3 for user access.
-
-- **RT-Smart**:
-  - Fixed missing I2C, SPI, and UART device nodes.
+For questions, contributions, or bug reports, visit our [GitHub organization](https://github.com/kendryte/canmv_k230).
