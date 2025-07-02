@@ -46,7 +46,9 @@ install:
 	fi;
 	@echo "Toolchain $(toolchain_file_name) installed."
 else
-ifneq ($(TOOLCHIAN_EXIST),1)
-$(error Please run make dl_toolchain to downloading toolchains...)
+ifeq ($(SKIP_TOOLCHAIN_CHECK),1)
+    $(info Skipping toolchain check due to SKIP_TOOLCHAIN_CHECK=1)
+else ifneq ($(TOOLCHAIN_EXIST),1)
+    $(error Please run 'make dl_toolchain' to download toolchains)
 endif
 endif
