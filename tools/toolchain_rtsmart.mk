@@ -18,16 +18,17 @@ $(shell command -v $(1) >/dev/null 2>&1 && echo 1 || echo 0)
 endef
 TOOLCHIAN_EXIST=$(call command_exists, $(CROSS_COMPILE)gcc)
 
+# Default value based on native build
 ifeq ($(MAKECMDGOALS), install)
-ifeq ($(NATIVE_BUILD),1)
-	DOWNLOAD_SERVER?=https://ai.b-bug.org/k230/toolchain
-else
-	DOWNLOAD_SERVER?=https://kendryte-download.canaan-creative.com/k230/toolchain
-endif
 
-# for git actions
-ifeq ($(CI),true)
-	DOWNLOAD_SERVER:=https://github.com/kendryte/canmv_k230/releases/download/v1.1/
+ifeq ($(NATIVE_BUILD),1)
+    DOWNLOAD_SERVER ?= https://ai.b-bug.org/k230/toolchain
+else
+    DOWNLOAD_SERVER ?= https://kendryte-download.canaan-creative.com/k230/toolchain
+
+    ifeq ($(CI),true)
+        DOWNLOAD_SERVER := https://github.com/kendryte/canmv_k230/releases/download/v1.1/
+    endif
 endif
 
 toolchain_file_name=riscv64-unknown-linux-musl-rv64imafdcv-lp64d-20230420.tar.bz2

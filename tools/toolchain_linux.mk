@@ -19,15 +19,15 @@ endef
 TOOLCHAIN_EXIST=$(call command_exists, $(CROSS_COMPILE)gcc)
 
 ifeq ($(MAKECMDGOALS), install)
-ifeq ($(NATIVE_BUILD),1)
-	DOWNLOAD_SERVER?=https://ai.b-bug.org/k230/toolchain
-else
-	DOWNLOAD_SERVER?=https://kendryte-download.canaan-creative.com/k230/toolchain
-endif
 
-# for git actions
-ifeq ($(CI),true)
-	DOWNLOAD_SERVER:=https://github.com/kendryte/canmv_k230/releases/download/v1.1/
+ifeq ($(NATIVE_BUILD),1)
+    DOWNLOAD_SERVER ?= https://ai.b-bug.org/k230/toolchain
+else
+    DOWNLOAD_SERVER ?= https://kendryte-download.canaan-creative.com/k230/toolchain
+
+    ifeq ($(CI),true)
+        DOWNLOAD_SERVER := https://github.com/kendryte/canmv_k230/releases/download/v1.1/
+    endif
 endif
 
 toolchain_file_name=Xuantie-900-gcc-linux-5.10.4-glibc-x86_64-V2.6.0.tar.bz2
