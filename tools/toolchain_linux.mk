@@ -16,7 +16,7 @@ export CROSS_COMPILE=$(CROSS_COMPILE_DIR)/$(CROSS_COMPILE_PREFIX)
 define command_exists
 $(shell command -v $(1) >/dev/null 2>&1 && echo 1 || echo 0)
 endef
-TOOLCHIAN_EXIST=$(call command_exists, $(CROSS_COMPILE)gcc)
+TOOLCHAIN_EXIST=$(call command_exists, $(CROSS_COMPILE)gcc)
 
 ifeq ($(MAKECMDGOALS), install)
 ifeq ($(NATIVE_BUILD),1)
@@ -36,7 +36,7 @@ toolchain_install_path=$(SDK_TOOLCHAIN_DIR)/$(toolchain_file_name)
 
 .PHONY: install
 install:
-	@if [ ! $(TOOLCHIAN_EXIST) -eq 1 ]; then \
+	@if [ ! $(TOOLCHAIN_EXIST) -eq 1 ]; then \
 		if [ ! -f $(toolchain_install_path) ]; then \
 			echo "Download toolchain $(toolchain_file_name) from $(toolchain_download_url)"; \
 			wget -q --show-progress -P $(SDK_TOOLCHAIN_DIR) $(toolchain_download_url); \
