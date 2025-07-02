@@ -54,10 +54,11 @@ jobs:
 
       - name: Download toolchains
         run: |
-          make dl_toolchain
+          make dl_toolchain TOOLCHAIN=rtsmart
 
       - name: Build Projects
         run: |
+          export SKIP_TOOLCHAIN_CHECK=1
           source ~/.canmv_venv/bin/activate
           projects=("k230_rtos_01studio_defconfig" "k230_rtos_aihardware_defconfig" "k230_rtos_evb_defconfig" "k230_rtos_evb_spinand_defconfig" "k230_rtos_lckfb_defconfig")
           echo "Config list is ${projects}"
