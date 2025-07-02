@@ -154,9 +154,16 @@ else
 endif
 
 .PHONY: dl_toolchain
+
 dl_toolchain:
-	@$(MAKE) -f $(SDK_TOOLS_DIR)/toolchain_linux.mk install
+ifeq ($(TOOLCHAIN),rtsmart)
 	@$(MAKE) -f $(SDK_TOOLS_DIR)/toolchain_rtsmart.mk install
+else ifeq ($(TOOLCHAIN),linux)
+	@$(MAKE) -f $(SDK_TOOLS_DIR)/toolchain_linux.mk install
+else
+	@$(MAKE) -f $(SDK_TOOLS_DIR)/toolchain_rtsmart.mk install
+	@$(MAKE) -f $(SDK_TOOLS_DIR)/toolchain_linux.mk install
+endif
 
 .PHONY: help
 help:
