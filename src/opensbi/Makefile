@@ -18,17 +18,18 @@ build:
 	@rm -rf $(SDK_OPENSBI_SRC_DIR)/opensbi/rtthread.bin;
 	@if [ ! -f $(SDK_BUILD_IMAGES_DIR)/rtsmart/rtthread.bin ]; then \
 		echo "should run make rtsmart" && exit 1; \
-	fi; \
-	cp $(SDK_BUILD_IMAGES_DIR)/rtsmart/rtthread.bin $(SDK_OPENSBI_SRC_DIR)/opensbi/;
+	fi;
 
 ifeq ($(CONFIG_OPENSBI_USE_PREBUILT_FW_JUMP),y)
+	@cp $(SDK_PREBUILT_FW_JUMP_PATH) $(SDK_OPENSBI_BUILD_DIR)/opensbi_fw_jump.bin;
 	@echo "Using prebuilt fw_jump.bin instead of building OpenSBI..."
 	@if [ ! -f $(SDK_PREBUILT_FW_JUMP_PATH) ]; then \
 		echo "Prebuilt fw_jump.bin not found at $(SDK_PREBUILT_FW_JUMP_PATH)" && exit 1; \
 	fi; \
-	cp $(SDK_PREBUILT_FW_JUMP_PATH) $(SDK_OPENSBI_BUILD_DIR)/opensbi_fw_jump.bin;
 	cp $(SDK_BUILD_IMAGES_DIR)/rtsmart/rtthread.bin $(SDK_OPENSBI_BUILD_DIR)/;
 else
+	@cp $(SDK_BUILD_IMAGES_DIR)/rtsmart/rtthread.bin $(SDK_OPENSBI_SRC_DIR)/opensbi/;
+	@echo "Compiling OpenSBI..."
 	@cd $(SDK_OPENSBI_SRC_DIR)/opensbi; \
 	export PLATFORM=kendryte/fpgac908; \
 	$(MAKE) -j$(NCPUS) O=$(SDK_OPENSBI_BUILD_DIR) OPENSBI_QUIET=1 CROSS_COMPILE=$(CROSS_COMPILE) || exit $?; \
