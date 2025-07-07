@@ -28,4 +28,12 @@ include/generated
 rtsmart_defconfig
 uboot_defconfig
 
+# subproject
+src/canmv/
+src/opensbi/opensbi/
+src/rtsmart/libs/
+src/rtsmart/mpp/
+src/rtsmart/rtsmart/
+src/rtsmart/examples/
+src/uboot/uboot/
 src/uboot/loader/
