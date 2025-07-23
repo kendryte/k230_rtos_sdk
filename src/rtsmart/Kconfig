@@ -52,7 +52,7 @@ menu "RT-Smart Configuration"
         string "Rtsmart auto execute command string"
         default "/sdcard/micropython"
 
-    config ENABLE_NETWORK_RT_LAN_OVER_USB_OVER_USB
+    config ENABLE_NETWORK_RT_LAN_OVER_USB
         bool "Enable Network RT-Thread Lan(eth) over USB"
         default y
 
