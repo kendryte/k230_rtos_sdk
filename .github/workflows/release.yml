@@ -50,7 +50,7 @@ jobs:
             cmake libyaml-dev scons mtools bzip2
           python3 -m venv ~/.canmv_venv
           source ~/.canmv_venv/bin/activate
-          pip3 install pycryptodome gmssl jsonschema jinja2
+          pip3 install pycryptodome gmssl jsonschema jinja2 toml
 
       - name: Download toolchains
         run: |

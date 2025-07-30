@@ -31,7 +31,6 @@ endif
 	export MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp; \
 	cp -f $(SDK_SRC_ROOT_DIR)/include/generated/autoconf.h $(SDK_RTSMART_SRC_DIR)/mpp/include/comm/k_autoconf_comm.h; \
 	cp -f $(SDK_SRC_ROOT_DIR)/include/generated/autoconf.h $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3/k_autoconf_comm.h; \
-	$(SDK_RTSMART_SRC_DIR)/parse_config || exit $?; \
 	cd $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3; \
 	if [ ! -f configs/${RTSMART_DEFCONFIG} ]; then \
 		echo "Error: Configuration file '${RTSMART_DEFCONFIG}' not found."; \

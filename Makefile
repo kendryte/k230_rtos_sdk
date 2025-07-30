@@ -123,12 +123,24 @@ app-clean:
 app-distclean:
 	@$(MAKE) -C $(SDK_APPS_SRC_DIR) distclean
 
+
+.PHONY: romfs
+romfs:
+ifeq ($(CONFIG_RTSMART_ENABLE_ROMFS),y)
+	@ROMFS_DIR=$(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3/romfs/ python3 $(SDK_TOOLS_DIR)/copy_romfs.py || exit $?;
+	@$(MAKE) opensbi || exit $?;
+endif
+
 .PHONY: rm_image
 rm_image:
 	@rm -rf $(SDK_BUILD_IMAGES_DIR)
 
-genimage: $(TOOL_GENIMAGE) rm_image uboot rtsmart opensbi canmv app
+genimage: $(TOOL_GENIMAGE) rm_image uboot rtsmart opensbi canmv app romfs
 	@$(SDK_TOOLS_DIR)/gen_image.sh
+
+ifeq ($(CONFIG_RTSMART_ENABLE_ROMFS),y)
+	@rm -rf $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3/romfs/
+endif
 
 clean: kconfig-clean $(TOOL_GENIMAGE)-clean uboot-clean rtsmart-clean opensbi-clean canmv-clean app-clean
 	@echo "Clean done."
