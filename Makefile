@@ -94,6 +94,10 @@ rtsmart-menuconfig:
 
 .PHONY: opensbi opensbi-clean opensbi-distclean
 opensbi: .autoconf rtsmart
+ifeq ($(CONFIG_RTSMART_ENABLE_ROMFS),y)
+	@ROMFS_DIR=$(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3/romfs/ python3 $(SDK_TOOLS_DIR)/copy_romfs.py || exit $?;
+	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR) kernel || exit $?;
+endif
 	@$(MAKE) -C $(SDK_OPENSBI_SRC_DIR) all
 opensbi-clean:
 	@$(MAKE) -C $(SDK_OPENSBI_SRC_DIR) clean
@@ -124,18 +128,11 @@ app-distclean:
 	@$(MAKE) -C $(SDK_APPS_SRC_DIR) distclean
 
 
-.PHONY: romfs
-romfs:
-ifeq ($(CONFIG_RTSMART_ENABLE_ROMFS),y)
-	@ROMFS_DIR=$(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3/romfs/ python3 $(SDK_TOOLS_DIR)/copy_romfs.py || exit $?;
-	@$(MAKE) opensbi || exit $?;
-endif
-
 .PHONY: rm_image
 rm_image:
 	@rm -rf $(SDK_BUILD_IMAGES_DIR)
 
-genimage: $(TOOL_GENIMAGE) rm_image uboot rtsmart opensbi canmv app romfs
+genimage: $(TOOL_GENIMAGE) rm_image uboot rtsmart canmv app opensbi
 	@$(SDK_TOOLS_DIR)/gen_image.sh
 
 ifeq ($(CONFIG_RTSMART_ENABLE_ROMFS),y)
