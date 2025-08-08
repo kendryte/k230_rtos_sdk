@@ -80,6 +80,12 @@ menu "RT-Smart Configuration"
                 default "romfs.toml"
         endif
 
+    config RTSMART_LWP_APP_STACK_SIZE
+        hex "Rtsmart LWP app stack size"
+        default 0x10000
+        help
+            The stack size for LWP application, default is 0x10000 bytes.
+
     comment "Examples Configuration"
     source "$(SDK_BUILD_DIR)/Kconfig.rtt_examples"
 
