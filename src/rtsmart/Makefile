@@ -216,3 +216,52 @@ menuconfig:
 	scons --menuconfig; \
 	cp .config configs/${RTSMART_DEFCONFIG}; \
 	cd -;
+
+.PHONY: arduino-sdk arduino-sdk-clean arduino-sdk-distclean
+arduino-sdk:
+	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib/**
+	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/**
+
+	# Copy 3rd-party include and libraries
+	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/3rd_party
+	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-3rd_party
+	@cp -rf $(SDK_RTSMART_BUILD_DIR)/libs/3rd-party/include/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/3rd_party/
+	@cp -rf $(SDK_RTSMART_BUILD_DIR)/libs/3rd-party/lib/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-3rd_party/
+	@python3 $(SDK_TOOLS_DIR)/merge_libs.py \
+		--toolchain-prefix $(CROSS_COMPILE) \
+		--input $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-3rd_party \
+		--output $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib/lib3rd_party.a || exit $?;
+	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-3rd_party
+
+	# Copy rtsmart_hal include and libraries
+	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/rtsmart_hal
+	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-rtsmart_hal
+	@cp -rf $(SDK_RTSMART_BUILD_DIR)/libs/rtsmart_hal/include/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/rtsmart_hal/
+	@cp -rf $(SDK_RTSMART_BUILD_DIR)/libs/rtsmart_hal/lib/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-rtsmart_hal/
+	@python3 $(SDK_TOOLS_DIR)/merge_libs.py \
+		--toolchain-prefix $(CROSS_COMPILE) \
+		--input $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-rtsmart_hal \
+		--output $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib/librtsmart_hal.a || exit $?;
+	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-rtsmart_hal
+
+	# Copy mpp include and libraries
+	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/mpp
+	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/mpp/api
+	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-mpp
+	@cp -rf $(SDK_RTSMART_SRC_DIR)/mpp/include/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/mpp/
+	@cp -rf $(SDK_RTSMART_SRC_DIR)/mpp/userapps/api/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/mpp/api/
+	@cp -rf $(SDK_RTSMART_SRC_DIR)/mpp/userapps/lib/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-mpp/
+
+	@python3 $(SDK_TOOLS_DIR)/merge_libs.py \
+		--toolchain-prefix $(CROSS_COMPILE) \
+		--input $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-mpp \
+		--output $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib/libmpp.a || exit $?;
+	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-mpp
+
+	@echo "Generate Arduino-core sdk done."
+
+arduino-sdk-clean:
+	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib/**
+	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/**
+
+arduino-sdk-distclean: arduino-sdk-clean

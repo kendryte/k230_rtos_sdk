@@ -91,6 +91,8 @@ else
   -include $(SDK_SRC_ROOT_DIR)/.config
 endif
 
+CONFIG_BOARD := $(call qstrip,$(CONFIG_BOARD))
+
 export CONFIG_SDK_ENABLE_CANMV
 
 ifeq ($(strip $(filter $(MAKECMDGOALS),list_def list-def dl_toolchain)),)
@@ -122,6 +124,8 @@ export SDK_UBOOT_BUILD_DIR=$(SDK_BUILD_DIR)/uboot
 export SDK_CANMV_BUILD_DIR=$(SDK_BUILD_DIR)/canmv
 export SDK_APPS_BUILD_DIR=$(SDK_BUILD_DIR)/applications
 
+export SDK_ARDUINO_SDK_BUILD_DIR=$(SDK_SRC_ROOT_DIR)/output/arduino-sdk
+
 export SDK_BUILD_IMAGES_DIR=$(SDK_BUILD_DIR)/images
 
 ifeq ($(strip $(filter $(MAKECMDGOALS),list_def list-def dl_toolchain)),)
@@ -132,6 +136,7 @@ ifeq ($(strip $(filter $(MAKECMDGOALS),list_def list-def dl_toolchain)),)
   $(call check_build_dir, $(SDK_UBOOT_BUILD_DIR))
   $(call check_build_dir, $(SDK_CANMV_BUILD_DIR))
   $(call check_build_dir, $(SDK_APPS_BUILD_DIR))
+  $(call check_build_dir, $(SDK_ARDUINO_SDK_BUILD_DIR))
 
   $(call check_build_dir, $(SDK_TOOLCHAIN_DIR))
 endif

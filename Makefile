@@ -1,10 +1,8 @@
 export SDK_SRC_ROOT_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 
-include $(SDK_SRC_ROOT_DIR)/tools/mkenv.mk
+.DEFAULT_GOAL := all
 
-.PHONY: all genimage clean distclean 
-all: genimage
-	@echo "Build K230 done, board $(CONFIG_BOARD), config $(MK_LIST_DEFCONFIG)"
+include $(SDK_SRC_ROOT_DIR)/tools/mkenv.mk
 
 include $(SDK_TOOLS_DIR)/kconfig.mk
 include $(SDK_TOOLS_DIR)/genimage.mk
@@ -127,21 +125,38 @@ app-clean:
 app-distclean:
 	@$(MAKE) -C $(SDK_APPS_SRC_DIR) distclean
 
+.PHONY: arduino-sdk arduino-sdk-clean arduino-sdk-distclean
+arduino-sdk: .autoconf uboot rtsmart opensbi
+	@$(MAKE) -C $(SDK_UBOOT_SRC_DIR) arduino-sdk
+	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR) arduino-sdk
+	@$(MAKE) -C $(SDK_OPENSBI_SRC_DIR) arduino-sdk
+arduino-sdk-clean: uboot-clean
+	@$(MAKE) -C $(SDK_UBOOT_SRC_DIR) arduino-sdk-clean
+	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR) arduino-sdk-clean
+	@$(MAKE) -C $(SDK_OPENSBI_SRC_DIR) arduino-sdk-clean
+arduino-sdk-distclean: uboot-distclean
+	@$(MAKE) -C $(SDK_UBOOT_SRC_DIR) arduino-sdk-distclean
+	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR) arduino-sdk-distclean
+	@$(MAKE) -C $(SDK_OPENSBI_SRC_DIR) arduino-sdk-distclean
 
 .PHONY: rm_image
 rm_image:
 	@rm -rf $(SDK_BUILD_IMAGES_DIR)
 
-genimage: $(TOOL_GENIMAGE) rm_image uboot rtsmart canmv app opensbi
+.PHONY: all
+all: $(TOOL_GENIMAGE) rm_image uboot rtsmart canmv app opensbi
 	@$(SDK_TOOLS_DIR)/gen_image.sh
+	@echo "Build K230 done, board $(CONFIG_BOARD), config $(MK_LIST_DEFCONFIG)"
 
 ifeq ($(CONFIG_RTSMART_ENABLE_ROMFS),y)
 	@rm -rf $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3/romfs/
 endif
 
+.PHONY: clean
 clean: kconfig-clean $(TOOL_GENIMAGE)-clean uboot-clean rtsmart-clean opensbi-clean canmv-clean app-clean
 	@echo "Clean done."
 
+.PHONY: distclean
 distclean: kconfig-distclean $(TOOL_GENIMAGE)-distclean uboot-distclean rtsmart-distclean opensbi-distclean canmv-distclean app-distclean
 	$(call del_mark)
 	@rm -rf $(SDK_BUILD_DIR)
@@ -163,7 +178,6 @@ else
 endif
 
 .PHONY: dl_toolchain
-
 dl_toolchain:
 ifeq ($(TOOLCHAIN),rtsmart)
 	@$(MAKE) -f $(SDK_TOOLS_DIR)/toolchain_rtsmart.mk install
@@ -209,5 +223,6 @@ else
 endif
 	@echo "make log                      -- Make all and generate log.txt";
 	@echo "make dl_toolchain             -- Download toolchain, only need run at first time";
+	@echo "make arduino-sdk              -- Generate arduino-sdk";
 	@echo "Supported board configs";
 	@ls $(SDK_SRC_ROOT_DIR)/configs/ | awk '{print "\t", $$0}'

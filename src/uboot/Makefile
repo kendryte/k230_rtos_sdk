@@ -27,7 +27,7 @@ else
 endif
 
 all: build
-	$(SDK_UBOOT_SRC_DIR)/gen_image || exit $?;
+	@$(SDK_UBOOT_SRC_DIR)/gen_image || exit $?;
 
 clean:
 	@export ARCH=riscv; \
@@ -44,3 +44,14 @@ menuconfig: clean
 	make -C uboot savedefconfig || exit $?; \
 	cp uboot/defconfig $(SDK_UBOOT_SRC_DIR)/uboot/configs/$(UBOOT_DEFCONFIG); \
 	make -C uboot distclean || exit $?;
+
+.PHONY: arduino-sdk arduino-sdk-clean arduino-sdk-distclean
+arduino-sdk:
+	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/variants/$(CONFIG_BOARD)/uboot/**
+	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/variants/$(CONFIG_BOARD)/uboot
+	@cp -rf $(SDK_BUILD_IMAGES_DIR)/uboot/* $(SDK_ARDUINO_SDK_BUILD_DIR)/variants/$(CONFIG_BOARD)/uboot/
+
+arduino-sdk-clean:
+	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/$(CONFIG_BOARD)/uboot/**
+
+arduino-sdk-distclean: arduino-sdk-clean

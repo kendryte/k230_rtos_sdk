@@ -47,3 +47,14 @@ clean:
 	@rm -rf $(SDK_BUILD_IMAGES_DIR)/opensbi
 
 distclean: clean
+
+.PHONY: arduino-sdk arduino-sdk-clean arduino-sdk-distclean
+arduino-sdk:
+	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/variants/$(CONFIG_BOARD)/opensbi/**
+	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/variants/$(CONFIG_BOARD)/opensbi
+	@cp -rf $(SDK_BUILD_IMAGES_DIR)/opensbi/* $(SDK_ARDUINO_SDK_BUILD_DIR)/variants/$(CONFIG_BOARD)/opensbi/
+
+arduino-sdk-clean:
+	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/$(CONFIG_BOARD)/opensbi/**
+
+arduino-sdk-distclean: arduino-sdk-clean
