@@ -55,6 +55,10 @@ menu "Board Configuration"
             bool "K230 EVB"
             select BOARD_CHIP_K230
 
+        config BOARD_K230D_EVB
+            bool "K230D EVB"
+            select BOARD_CHIP_K230D
+
         config BOARD_K230D_CANMV_LABPLUS_AI_CAMERA
             bool "K230D CanMV LabPlus Ai Camera"
             select BOARD_CHIP_K230D
@@ -78,6 +82,7 @@ menu "Board Configuration"
 	    default "k230_aihardware" if BOARD_K230_AIHARDWARE
         default "k230d_canmv_atk_dnk230d" if BOARD_K230D_CANMV_ATK_DNK230D
         default "k230_evb" if BOARD_K230_EVB
+        default "k230d_evb" if BOARD_K230D_EVB
         default "k230d_labplus_ai_camera" if BOARD_K230D_CANMV_LABPLUS_AI_CAMERA
         default "k230_labplus_1956" if BOARD_K230_LABPLUS_1956
 
@@ -93,6 +98,7 @@ menu "Board Configuration"
         default "K230_aihardware" if BOARD_K230_AIHARDWARE
         default "CanMV_K230D_ATK_DNK230D" if BOARD_K230D_CANMV_ATK_DNK230D
         default "K230_EVB" if BOARD_K230_EVB
+        default "K230D_EVB" if BOARD_K230D_EVB
         default "CanMV_K230D_LabPlusAiCamera" if BOARD_K230D_CANMV_LABPLUS_AI_CAMERA
         default "CanMV_K230_LabPlus_1956" if BOARD_K230_LABPLUS_1956
 
