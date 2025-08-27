@@ -258,6 +258,35 @@ arduino-sdk:
 		--output $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib/libmpp.a || exit $?;
 	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-mpp
 
+	# Copy opencv include and libraries
+	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/opencv4
+	@cp -rf $(SDK_RTSMART_SRC_DIR)/libs/opencv/include/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/
+
+	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-opencv
+	@cp -rf $(SDK_RTSMART_SRC_DIR)/libs/opencv/lib/*.a $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-opencv/
+	@python3 $(SDK_TOOLS_DIR)/merge_libs.py \
+		--toolchain-prefix $(CROSS_COMPILE) \
+		--input $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-opencv \
+		--output $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib/libopencv.a || exit $?;
+	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-opencv
+
+	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-opencv-3rdparty
+	@cp -rf $(SDK_RTSMART_SRC_DIR)/libs/opencv/lib/opencv4/3rdparty/*.a $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-opencv-3rdparty/
+	@python3 $(SDK_TOOLS_DIR)/merge_libs.py \
+		--toolchain-prefix $(CROSS_COMPILE) \
+		--input $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-opencv-3rdparty \
+		--output $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib/libopencv_3rdparty.a || exit $?;
+	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-opencv-3rdparty
+
+	# Copy openblas include and libraries
+	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/openblas
+	@cp -rf $(SDK_RTSMART_SRC_DIR)/libs/openblas/include/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/openblas/
+	@cp -rf $(SDK_RTSMART_SRC_DIR)/libs/openblas/lib/*.a $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib/
+
+	# Copy nncase include and libraries
+	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/nncase/
+	@cp -rf $(SDK_RTSMART_SRC_DIR)/libs/nncase/riscv64/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/nncase/
+
 	@echo "Generate Arduino-core sdk done."
 
 arduino-sdk-clean:
