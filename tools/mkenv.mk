@@ -51,6 +51,23 @@ ifneq ($(MKENV_INCLUDED),1)
   endif
 endif
 
+# Turn on increased build verbosity by defining BUILD_VERBOSE in your main
+# Makefile or in your environment. You can also use V=1 on the make command
+# line.
+
+ifeq ("$(origin V)", "command line")
+BUILD_VERBOSE=$(V)
+endif
+
+ifndef BUILD_VERBOSE
+BUILD_VERBOSE = 0
+endif
+ifeq ($(BUILD_VERBOSE),0)
+Q = @
+else
+Q =
+endif
+
 # Check if 'bear' command exists
 BEAR_EXISTS := $(shell command -v bear >/dev/null 2>&1 && echo yes || echo no)
 
