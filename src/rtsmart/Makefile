@@ -223,15 +223,10 @@ arduino-sdk:
 	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/**
 
 	# Copy 3rd-party include and libraries
-	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/3rd_party
-	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-3rd_party
-	@cp -rf $(SDK_RTSMART_BUILD_DIR)/libs/3rd-party/include/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/3rd_party/
-	@cp -rf $(SDK_RTSMART_BUILD_DIR)/libs/3rd-party/lib/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-3rd_party/
-	@python3 $(SDK_TOOLS_DIR)/merge_libs.py \
-		--toolchain-prefix $(CROSS_COMPILE) \
-		--input $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-3rd_party \
-		--output $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib/lib3rd_party.a || exit $?;
-	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-3rd_party
+	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/3rd_party/include
+	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/3rd_party/lib
+	@cp -rf $(SDK_RTSMART_BUILD_DIR)/libs/3rd-party/include/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/3rd_party/include/
+	@cp -rf $(SDK_RTSMART_BUILD_DIR)/libs/3rd-party/lib/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/3rd_party/lib/
 
 	# Copy rtsmart_hal include and libraries
 	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/rtsmart_hal
@@ -252,6 +247,10 @@ arduino-sdk:
 	@cp -rf $(SDK_RTSMART_SRC_DIR)/mpp/userapps/api/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/mpp/api/
 	@cp -rf $(SDK_RTSMART_SRC_DIR)/mpp/userapps/lib/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-mpp/
 
+	# Remove vglite
+	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-mpp/libvg_lite.a
+	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-mpp/libvg_lite_util.a
+
 	@python3 $(SDK_TOOLS_DIR)/merge_libs.py \
 		--toolchain-prefix $(CROSS_COMPILE) \
 		--input $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-mpp \
@@ -259,29 +258,18 @@ arduino-sdk:
 	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-mpp
 
 	# Copy opencv include and libraries
-	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/opencv4
-	@cp -rf $(SDK_RTSMART_SRC_DIR)/libs/opencv/include/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/
+	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/opencv/include
+	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/opencv/lib/3rdparty
+	@cp -rf $(SDK_RTSMART_SRC_DIR)/libs/opencv/include/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/opencv/include/
 
-	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-opencv
-	@cp -rf $(SDK_RTSMART_SRC_DIR)/libs/opencv/lib/*.a $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-opencv/
-	@python3 $(SDK_TOOLS_DIR)/merge_libs.py \
-		--toolchain-prefix $(CROSS_COMPILE) \
-		--input $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-opencv \
-		--output $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib/libopencv.a || exit $?;
-	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-opencv
-
-	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-opencv-3rdparty
-	@cp -rf $(SDK_RTSMART_SRC_DIR)/libs/opencv/lib/opencv4/3rdparty/*.a $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-opencv-3rdparty/
-	@python3 $(SDK_TOOLS_DIR)/merge_libs.py \
-		--toolchain-prefix $(CROSS_COMPILE) \
-		--input $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-opencv-3rdparty \
-		--output $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib/libopencv_3rdparty.a || exit $?;
-	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-opencv-3rdparty
+	@cp -rf $(SDK_RTSMART_SRC_DIR)/libs/opencv/lib/*.a $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/opencv/lib/
+	@cp -rf $(SDK_RTSMART_SRC_DIR)/libs/opencv/lib/opencv4/3rdparty/*.a $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/opencv/lib/3rdparty/
 
 	# Copy openblas include and libraries
-	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/openblas
-	@cp -rf $(SDK_RTSMART_SRC_DIR)/libs/openblas/include/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/openblas/
-	@cp -rf $(SDK_RTSMART_SRC_DIR)/libs/openblas/lib/*.a $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib/
+	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/openblas/include
+	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/openblas/lib
+	@cp -rf $(SDK_RTSMART_SRC_DIR)/libs/openblas/include/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/openblas/include/
+	@cp -rf $(SDK_RTSMART_SRC_DIR)/libs/openblas/lib/*.a $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/openblas/lib/
 
 	# Copy nncase include and libraries
 	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/nncase/
