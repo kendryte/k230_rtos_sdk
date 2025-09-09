@@ -27,6 +27,10 @@ menu "Board Configuration"
             bool "K230 CanMV 01 Studio, Onboard 1GiB LPDDR4"
             select BOARD_CHIP_K230
 
+        config BOARD_K230_CANMV_GT6700
+            bool "K230 CanMV GT6700, Onboard 1GiB LPDDR4"
+            select BOARD_CHIP_K230
+
         config BOARD_K230D_CANMV_BPI_ZERO
             bool "K230D CanMV BPI-Zero, SiP 128MiB LPDDR4"
             select BOARD_CHIP_K230D
@@ -75,6 +79,7 @@ menu "Board Configuration"
         default "k230_canmv_v3p0" if BOARD_K230_CANMV_V3P0
         default "k230_canmv_lckfb" if BOARD_K230_CANMV_LCKFB
         default "k230_canmv_01studio" if BOARD_K230_CANMV_01STUDIO
+        default "k230_canmv_gt6700" if BOARD_K230_CANMV_GT6700
         default "k230d_canmv_bpi_zero" if BOARD_K230D_CANMV_BPI_ZERO
         default "k230d_canmv_junroc_ai_cam" if BOARD_K230D_CANMV_JUNROC_AI_CAM
 	    default "k230_canmv_dongshanpi" if BOARD_K230_CANMV_DONGSHANPI
@@ -92,6 +97,7 @@ menu "Board Configuration"
         default "CanMV_K230_V3P0" if BOARD_K230_CANMV_V3P0
         default "CanMV_K230_LCKFB" if BOARD_K230_CANMV_LCKFB
         default "CanMV_K230_01Studio" if BOARD_K230_CANMV_01STUDIO
+        default "CanMV_K230_GT6700" if BOARD_K230_CANMV_GT6700
         default "CanMV_K230_RTT_EVB_BOARD" if BOARD_K230_CANMV_RTT_EVB
         default "CanMV_K230D_Zero" if BOARD_K230D_CANMV_BPI_ZERO
         default "CanMV_K230D_JUNROC_AI_CAM" if BOARD_K230D_CANMV_JUNROC_AI_CAM
@@ -134,6 +140,7 @@ menu "Board Configuration"
     source "$(SDK_BOARDS_DIR)/k230_canmv_v3p0/Kconfig"
     source "$(SDK_BOARDS_DIR)/k230_canmv_lckfb/Kconfig"
     source "$(SDK_BOARDS_DIR)/k230_canmv_01studio/Kconfig"
+    source "$(SDK_BOARDS_DIR)/k230_canmv_gt6700/Kconfig"
     source "$(SDK_BOARDS_DIR)/k230d_canmv_bpi_zero/Kconfig"
     source "$(SDK_BOARDS_DIR)/k230d_canmv_junroc_ai_cam/Kconfig"
     source "$(SDK_BOARDS_DIR)/k230_canmv_dongshanpi/Kconfig"
