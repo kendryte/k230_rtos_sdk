@@ -1,14 +1,14 @@
 menu "Uboot Configuration"
 
-    config UBOOT_ENV_FILE
-        string "Uboot enviroment file"
-        default "default.env"
-
     config UBOOT_CONFIG_FILE
         string "Uboot config file prefix"
         default BOARD
         help
             uboot board config file name without _defconfig
+
+    config UBOOT_ENV_FILE
+        string "Uboot enviroment file"
+        default "default.env"
 
     menuconfig UBOOT_ENABLE_FAST_BOOT
         bool "Uboot Enable FastBoot"

@@ -1,5 +1,11 @@
 menu "RT-Smart Configuration"
 
+    config RTSMART_CONFIG_FILE
+        string "Rtsmart config file prefix"
+        default BOARD
+        help
+            rtsmart board config file name without _defconfig
+
     choice RTT_CONSOLE_ID
         bool "Rtsmart console uart"
         default RTT_CONSOLE_UART0
@@ -28,6 +34,16 @@ menu "RT-Smart Configuration"
         int "Rtsmart console uart baudrate"
         default 115200
 
+    config RTSMART_LWP_APP_STACK_SIZE
+        hex "Rtsmart LWP app stack size"
+        default 0x10000
+        help
+            The stack size for LWP application, default is 0x10000 bytes.
+
+    config RTT_AUTO_EXEC_CMD
+        string "Rtsmart auto execute command string"
+        default "/sdcard/micropython"
+
     menuconfig RT_AUTO_RESIZE_PARTITION
         bool "Enable auto resize partition"
         default y
@@ -39,39 +55,10 @@ menu "RT-Smart Configuration"
             config RT_AUTO_RESIZE_PARTITION_NR
                 int "Resize partition id"
                 default 2
-
-        endif
-
-    config RTSMART_CONFIG_FILE
-        string "Rtsmart config file prefix"
-        default BOARD
-        help
-            rtsmart board config file name without _defconfig
-
-    config RTT_AUTO_EXEC_CMD
-        string "Rtsmart auto execute command string"
-        default "/sdcard/micropython"
-
-    config ENABLE_NETWORK_RT_LAN_OVER_USB
-        bool "Enable Network RT-Thread Lan(eth) over USB"
-        default y
-
-    config ENABLE_NETWORK_RT_WLAN
-        bool "Enable Network RT-Thread Wlan"
-        default y
-
-    menuconfig ENABLE_UVC_CAMERA
-        bool "Enable UVC Camera Support"
-        default n
-
-        if ENABLE_UVC_CAMERA
-            config USBHOST_MAX_VIDEO_CLASS
-                int "Max Support uvc device"
-                default 1
         endif
 
     menuconfig RTSMART_ENABLE_ROMFS
-        bool "Rtsmart enable romfs"
+        bool "Enable romfs"
         default n
 
         if RTSMART_ENABLE_ROMFS
@@ -80,11 +67,29 @@ menu "RT-Smart Configuration"
                 default "romfs.toml"
         endif
 
-    config RTSMART_LWP_APP_STACK_SIZE
-        hex "Rtsmart LWP app stack size"
-        default 0x10000
-        help
-            The stack size for LWP application, default is 0x10000 bytes.
+    menu "RT-Thread Smart System Features"
+        config ENABLE_NETWORK_RT_LAN_OVER_USB
+            bool "Enable Network RT-Thread Lan(eth) over USB"
+            default y
+
+        config ENABLE_NETWORK_RT_WLAN
+            bool "Enable Network RT-Thread Wlan"
+            default y
+
+        menuconfig ENABLE_UVC_CAMERA
+            bool "Enable UVC Camera Support"
+            default n
+
+            if ENABLE_UVC_CAMERA
+                config USBHOST_MAX_VIDEO_CLASS
+                    int "Max Support uvc device"
+                    default 1
+            endif
+
+        config ENABLE_ROTARY_ENCODER
+            bool "Enable Rotary Encoder Support"
+            default n
+    endmenu
 
     comment "Examples Configuration"
     source "$(SDK_BUILD_DIR)/Kconfig.rtt_examples"
