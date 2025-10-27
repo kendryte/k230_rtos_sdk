@@ -222,6 +222,10 @@ arduino-sdk:
 	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib/**
 	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/**
 
+	# Copy autoconf.h
+	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/
+	@cp -rf $(SDK_SRC_ROOT_DIR)/include/generated/autoconf.h $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/
+
 	# Copy 3rd-party include and libraries
 	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/3rd_party/include
 	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/3rd_party/lib
