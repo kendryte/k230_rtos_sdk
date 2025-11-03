@@ -1,0 +1,15 @@
+menuconfig FAST_BOOT_CONFIGURATION
+    bool "Fast Boot Configuration"
+    default y
+
+    if FAST_BOOT_CONFIGURATION
+
+        config FAST_BOOT_FILE_PATH
+        string "Fast boot file path"
+        default "${SDK_CANMV_BUILD_DIR}/micropython"
+        help
+            Path to the file to be packaged as rtapp.elf.gz, you can use absolute path
+            Or you can use ${SDK_*} variables which will be expanded at build time.
+            Example: ${SDK_CANMV_BUILD_DIR}/micropython
+
+    endif

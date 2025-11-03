@@ -111,6 +111,8 @@ static cfg_opt_t partition_opts[] = {
 	CFG_STR("partition-uuid", NULL, CFGF_NONE),
 	CFG_STR("partition-type-uuid", NULL, CFGF_NONE),
 	CFG_INT("flag", 0, CFGF_NONE),
+	CFG_BOOL("load", cfg_false, CFGF_NONE),
+	CFG_INT("boot", 0, CFGF_NONE),
 	CFG_END()
 };
 
@@ -434,6 +436,8 @@ static int parse_partitions(struct image *image, cfg_t *imagesec)
 		part->partition_type_uuid = cfg_getstr(partsec, "partition-type-uuid");
 		part->partition_uuid = cfg_getstr(partsec, "partition-uuid");
 		part->flag = cfg_getint(partsec, "flag");
+		part->load = cfg_getbool(partsec, "load");
+		part->boot = cfg_getint(partsec, "boot");
 	}
 
 	return 0;

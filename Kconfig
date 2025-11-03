@@ -14,3 +14,4 @@ source "$(SDK_OPENSBI_SRC_DIR)/Kconfig"
 source "$(SDK_BUILD_DIR)/Kconfig.canmv"
 
 source "$(SDK_APPS_SRC_DIR)/Kconfig"
+source "$(SDK_SRC_ROOT_DIR)/Kconfig.fastboot"

@@ -42,7 +42,7 @@ menu "RT-Smart Configuration"
 
     config RTT_AUTO_EXEC_CMD
         string "Rtsmart auto execute command string"
-        default "/sdcard/micropython"
+        default "/bin/preload &"
 
     menuconfig RT_AUTO_RESIZE_PARTITION
         bool "Enable auto resize partition"

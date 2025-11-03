@@ -108,6 +108,7 @@ canmv: .autoconf
 ifeq ($(CONFIG_SDK_ENABLE_CANMV),y)
 	@$(MAKE) -C $(SDK_CANMV_SRC_DIR) all
 endif
+
 canmv-clean:
 ifeq ($(CONFIG_SDK_ENABLE_CANMV),y)
 	@$(MAKE) -C $(SDK_CANMV_SRC_DIR) clean
@@ -145,6 +146,7 @@ rm_image:
 
 .PHONY: all
 all: $(TOOL_GENIMAGE) rm_image uboot rtsmart canmv app opensbi
+	@$(SDK_TOOLS_DIR)/gen_rtapp_image.sh
 	@$(SDK_TOOLS_DIR)/gen_image.sh
 	@echo "Build K230 done, board $(CONFIG_BOARD), config $(MK_LIST_DEFCONFIG)"
 

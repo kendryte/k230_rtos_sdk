@@ -37,6 +37,22 @@
 
 #define PARTITION_TYPE_EXTENDED 0x0F
 
+#define TOC_INSERT_DATA_ALIGN 64
+
+struct toc_insert_data {
+	char partition_name[32];
+	uint64_t partition_offset;
+	uint64_t partition_size;
+	unsigned char load;
+	unsigned char boot;
+} __attribute__((aligned(TOC_INSERT_DATA_ALIGN)));
+ct_assert(sizeof(struct toc_insert_data) == TOC_INSERT_DATA_ALIGN);
+
+struct toc_data {
+	struct list_head list;
+	struct toc_insert_data insert;
+};
+
 struct hdimage {
 	unsigned int extended_partition_index;
 	struct partition *extended_partition;
@@ -48,6 +64,11 @@ struct hdimage {
 	cfg_bool_t gpt_no_backup;
 	cfg_bool_t fill;
 	unsigned long long file_size;
+
+	cfg_bool_t toc_enable;
+	uint64_t toc_offset;
+	uint32_t toc_num;
+	struct list_head toc_datas;
 };
 
 struct mbr_partition_entry {
@@ -563,6 +584,47 @@ static int hdimage_insert_gpt(struct image *image, struct list_head *partitions)
 	return 0;
 }
 
+static int hdimage_insert_toc(struct image *image){
+	struct hdimage *hd = image->handler_priv;
+	uint32_t index = 0;
+	struct toc_data *toc_entry;
+	int ret;
+	
+	struct toc_insert_data *toc_i_data;
+	toc_i_data = xzalloc(sizeof(struct toc_insert_data) * hd->toc_num);
+
+	image_info(image, "writing TOC\n");
+
+	list_for_each_entry(toc_entry, &hd->toc_datas, list) {
+		strncpy(toc_i_data[index].partition_name, toc_entry->insert.partition_name, sizeof(toc_i_data[index].partition_name) - 1);
+		toc_i_data[index].partition_offset = toc_entry->insert.partition_offset;
+		toc_i_data[index].partition_size = toc_entry->insert.partition_size;
+		toc_i_data[index].load = toc_entry->insert.load;
+		toc_i_data[index].boot = toc_entry->insert.boot;
+		// image_info(image, "partition name: %s, offset: 0x%lx, size: 0x%lx, load: %d, boot: %d\n", toc_i_data[index].partition_name, toc_i_data[index].partition_offset, toc_i_data[index].partition_size, toc_i_data[index].load, toc_i_data[index].boot);
+		// uint8_t *buf;
+		// uint8_t *buf_ptr;
+		// for(int i = 0; i < 64/sizeof(uint8_t); i++)
+		// {
+		// 	buf_ptr = (uint8_t*)&toc_i_data[index];
+		// 	buf = buf_ptr + i;
+		// 	printf("%02x", *buf);
+		// }
+		// printf("\n");
+
+		index++;
+	}
+
+
+	ret = insert_data(image, (unsigned char *)toc_i_data, imageoutfile(image), sizeof(*toc_i_data) * hd->toc_num, hd->toc_offset);
+	if (ret) {
+		image_error(image, "failed to write TOC\n");
+		return ret;
+	}
+	free(toc_i_data);
+
+	return 0;
+}
 
 static int hdimage_generate(struct image *image)
 {
@@ -612,6 +674,14 @@ static int hdimage_generate(struct image *image)
 		if (ret) {
 			image_error(image, "failed to write image partition '%s'\n",
 					part->name);
+			return ret;
+		}
+	}
+
+	if(hd->toc_enable && hd->toc_num){
+		ret = hdimage_insert_toc(image);
+		if (ret) {
+			image_error(image, "failed to write TOC\n");
 			return ret;
 		}
 	}
@@ -960,6 +1030,8 @@ static int hdimage_setup(struct image *image, cfg_t *cfg)
 	struct partition *gpt_backup = NULL;
 	bool partition_resized = false;
 	int ret;
+	struct toc_data *toc_entry;
+
 
 	image->handler_priv = hd;
 	hd->align = cfg_getint_suffix(cfg, "align");
@@ -968,6 +1040,8 @@ static int hdimage_setup(struct image *image, cfg_t *cfg)
 	hd->gpt_location = cfg_getint_suffix(cfg, "gpt-location");
 	hd->gpt_no_backup = cfg_getbool(cfg, "gpt-no-backup");
 	hd->fill = cfg_getbool(cfg, "fill");
+	hd->toc_enable = cfg_getbool(cfg, "toc");
+	hd->toc_offset = cfg_getint_suffix(cfg, "toc-offset");
 
 	if (is_block_device(imageoutfile(image))) {
 		if (image->size) {
@@ -1026,6 +1100,31 @@ static int hdimage_setup(struct image *image, cfg_t *cfg)
 	else if (hd->gpt_location % 512) {
 		image_error(image, "GPT table location (%lld) must be a "
 				   "multiple of 1 sector (512 bytes)\n", hd->gpt_location);
+	}
+
+	if (hd->toc_enable)
+	{
+		uint32_t index_count = 0;
+
+		INIT_LIST_HEAD(&hd->toc_datas);
+		
+		list_for_each_entry(part, &image->partitions, list) {
+			toc_entry = xzalloc(sizeof(*toc_entry));
+			strncpy(toc_entry->insert.partition_name, part->name, sizeof(toc_entry->insert.partition_name) - 1);
+			index_count++;
+			list_add_tail(&toc_entry->list, &hd->toc_datas);
+			// image_info(image,"TOC Entry: %s\n", toc_entry->insert.partition_name);
+		}
+
+		if(index_count)
+		{
+			struct partition *toc_part = fake_partition("[TOC]", hd->toc_offset ? hd->toc_offset : 0,
+						(sizeof(struct toc_insert_data)) * index_count);
+			hd->toc_num = index_count;
+			list_add_tail(&toc_part->list, &image->partitions);
+			image_info(image,"TOC Partition: %s (offset 0x%llx, size 0x%llx)\n", toc_part->name, toc_part->offset, toc_part->size);
+		}
+
 	}
 
 	if (hd->table_type != TYPE_NONE) {
@@ -1144,6 +1243,24 @@ static int hdimage_setup(struct image *image, cfg_t *cfg)
 		if (ret < 0)
 			return ret;
 
+		if(hd->toc_enable && hd->toc_num){
+			list_for_each_entry(toc_entry, &hd->toc_datas, list){
+				if(!strcmp(toc_entry->insert.partition_name, part->name))
+				{
+					toc_entry->insert.partition_offset = htole64(part->offset);
+					toc_entry->insert.partition_size = htole64(part->size);
+					toc_entry->insert.load = part->load ? 0x01 : 0x00;
+					toc_entry->insert.boot = part->boot;
+
+					image_info(image, "TOC Entry: %s (offset 0x%lx, size 0x%lx, load %d, boot %d)\n",
+						toc_entry->insert.partition_name, toc_entry->insert.partition_offset,
+						toc_entry->insert.partition_size, toc_entry->insert.load, toc_entry->insert.boot);
+
+					break;
+				}
+			}
+		}
+
 		/* the size of the extended partition will be filled in later */
 		if (!part->size && part != hd->extended_partition) {
 			image_error(image, "part %s size must not be zero\n",
@@ -1215,6 +1332,8 @@ static cfg_opt_t hdimage_opts[] = {
 	CFG_STR("gpt-location", NULL, CFGF_NONE),
 	CFG_BOOL("gpt-no-backup", cfg_false, CFGF_NONE),
 	CFG_BOOL("fill", cfg_false, CFGF_NONE),
+	CFG_BOOL("toc", cfg_false, CFGF_NONE),
+	CFG_STR("toc-offset", NULL, CFGF_NONE),
 	CFG_END()
 };
 

@@ -55,6 +55,8 @@ struct partition {
 	const char *partition_type_uuid;
 	const char *partition_uuid;
 	unsigned long long flag;
+	cfg_bool_t load;
+	unsigned char boot;
 	cfg_t *cfg;
 };
 
