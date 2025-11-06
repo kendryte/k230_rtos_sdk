@@ -5,7 +5,6 @@ export SDK_SRC_ROOT_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 include $(SDK_SRC_ROOT_DIR)/tools/mkenv.mk
 
 include $(SDK_TOOLS_DIR)/kconfig.mk
-include $(SDK_TOOLS_DIR)/genimage.mk
 
 ifeq ($(strip $(filter $(MAKECMDGOALS),clean distclean list_def list-def dl_toolchain)),)
 $(SDK_SRC_ROOT_DIR)/.config: $(KCONF)
@@ -142,18 +141,17 @@ rm_image:
 	@rm -rf $(SDK_BUILD_IMAGES_DIR)
 
 .PHONY: all
-all: $(TOOL_GENIMAGE) rm_image uboot rtsmart canmv app opensbi
-	@$(SDK_TOOLS_DIR)/gen_rtapp_image.sh
+all: rm_image uboot rtsmart opensbi canmv app 
+	@python3 $(SDK_TOOLS_DIR)/gen_image_rtapp.py
 	@$(SDK_TOOLS_DIR)/gen_image.sh
 	@echo "Build K230 done, board $(CONFIG_BOARD), config $(MK_LIST_DEFCONFIG)"
 
-
 .PHONY: clean
-clean: kconfig-clean $(TOOL_GENIMAGE)-clean uboot-clean rtsmart-clean opensbi-clean canmv-clean app-clean
+clean: kconfig-clean uboot-clean rtsmart-clean opensbi-clean canmv-clean app-clean
 	@echo "Clean done."
 
 .PHONY: distclean
-distclean: kconfig-distclean $(TOOL_GENIMAGE)-distclean uboot-distclean rtsmart-distclean opensbi-distclean canmv-distclean app-distclean
+distclean: kconfig-distclean uboot-distclean rtsmart-distclean opensbi-distclean canmv-distclean app-distclean
 	$(call del_mark)
 	@rm -rf $(SDK_BUILD_DIR)
 	@rm -rf $(SDK_SRC_ROOT_DIR)/.config

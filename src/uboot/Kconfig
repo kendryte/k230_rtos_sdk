@@ -48,4 +48,36 @@ menu "Uboot Configuration"
                 hex "Uboot Text Base Addr"
                 default 0x1000000
         endif
+
+    menuconfig UBOOT_ENABLE_SECURE_BOOT
+        bool "Uboot Enable SecureBoot"
+        default n
+        help
+            Not Support Yet.
+
+        if UBOOT_ENABLE_SECURE_BOOT
+            choice
+                prompt "SecureBoot Type"
+                default UBOOT_SECURE_BOOT_NONE
+
+                config UBOOT_SECURE_BOOT_NONE
+                    bool "None"
+                config UBOOT_SECURE_BOOT_SM4_SM2
+                    bool "SM4 Encrypt + SM2 Sign"
+                config UBOOT_SECURE_BOOT_AES_RSA
+                    bool "AES Encrypt + RSA Sign"
+            endchoice
+
+            config UBOOT_SECURE_BOOT_TYPE
+                int
+                default 0 if UBOOT_SECURE_BOOT_NONE
+                default 1 if UBOOT_SECURE_BOOT_SM4_SM2
+                default 2 if UBOOT_SECURE_BOOT_AES_RSA
+
+            config UBOOT_SECURE_BOOT_CONFIG_FILE
+                string "SecureBoot Config File Path"
+                default "image_uboot_cfg.json"
+                depends on UBOOT_SECURE_BOOT_SM4_SM2 || UBOOT_SECURE_BOOT_AES_RSA
+        endif
+
 endmenu

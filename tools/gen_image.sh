@@ -1,7 +1,6 @@
 #!/bin/bash
 
 source ${SDK_SRC_ROOT_DIR}/.config
-source ${SDK_TOOLS_DIR}/gen_image_func.sh
 
 gen_repo_info()
 {
@@ -34,13 +33,11 @@ gen_image()
 	local config="$1";
 	local image="$2";
 
-	GENIMAGE_TMP="genimage.tmp"; rm -rf "${GENIMAGE_TMP}";
-	GENIMAGE_MKUFFS=${SDK_TOOLS_DIR}/mkuffs ${TOOL_GENIMAGE} --rootpath "${SDK_BUILD_IMAGES_DIR}" --tmppath "${GENIMAGE_TMP}" --inputpath "${SDK_BUILD_IMAGES_DIR}" --outputpath "${SDK_BUILD_DIR}" --config "${config}"
+    python3 ${SDK_TOOLS_DIR}/genimage_py/genimage.py --rootpath "${SDK_BUILD_IMAGES_DIR}" --outputpath "${SDK_BUILD_DIR}" --config "${config}"
 
-    rm -rf "${GENIMAGE_TMP}";
     # Find the generated image file (could be .img or .kdimg)
     generated_image=$(find ${SDK_BUILD_DIR} -maxdepth 1 -type f \( -name "sysimage-sdcard.kdimg" -o -name "sysimage-sdcard.img" -o -name "sysimage-spinand.kdimg" -o -name "sysimage-spinor.kdimg"  \) | head -n 1)
-    
+
     if [ -z "$generated_image" ]; then
         echo "Error: No generated image file found!"
         exit 1
@@ -48,7 +45,7 @@ gen_image()
 
     # Get just the filename without path
     generated_image_name=$(basename "$generated_image")
-    
+
     # Get the file extension
     extension="${generated_image_name##*.}"
 

@@ -27,7 +27,7 @@ else
 endif
 
 all: build
-	@$(SDK_UBOOT_SRC_DIR)/gen_image || exit $?;
+	@python3 $(SDK_TOOLS_DIR)/gen_image_uboot.py -s $(SDK_UBOOT_BUILD_DIR)/spl/u-boot-spl.bin -u $(SDK_UBOOT_BUILD_DIR)/u-boot.bin
 
 clean:
 	@export ARCH=riscv; \

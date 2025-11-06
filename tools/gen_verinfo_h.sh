@@ -2,7 +2,6 @@
 
 source ${SDK_SRC_ROOT_DIR}/.config
 
-
 parse_nncase_version()
 {
     # Extract the version from the header file
@@ -10,6 +9,7 @@ parse_nncase_version()
 
     echo "$VERSION"
 }
+
 gen_version_file()
 {
     local version_file="$1"

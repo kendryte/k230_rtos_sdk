@@ -3,6 +3,8 @@ output/*
 *.o
 *.o.d
 
+__pycache__
+
 .config
 .config.old
 exclude.txt
