@@ -139,13 +139,7 @@ endif
 
 endif
 
-ALL_TARGETS := .parse_config mpp libs examples
-
-ifneq ($(CONFIG_RTSMART_ENABLE_ROMFS),y)
-ALL_TARGETS += kernel
-endif
-
-all: $(ALL_TARGETS)
+all: .parse_config mpp kernel libs examples
 	@echo "Copy sensor configs from $(SDK_RTSMART_SRC_DIR)/rtsmart/userapps/root/bin/ to ${SDK_BUILD_IMAGES_DIR}/bin/"
 
 ifeq ($(CONFIG_MPP_ENABLE_SENSOR_GC2093),y)
