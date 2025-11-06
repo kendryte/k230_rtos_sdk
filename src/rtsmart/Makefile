@@ -273,6 +273,12 @@ arduino-sdk:
 	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/nncase/
 	@cp -rf $(SDK_RTSMART_SRC_DIR)/libs/nncase/riscv64/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/nncase/
 
+	# Generate bin.vfat
+	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/variants/$(CONFIG_BOARD)/rtsmart/**
+	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/variants/$(CONFIG_BOARD)/rtsmart
+
+	@python3 $(SDK_TOOLS_DIR)/gen_image_vfat.py -o $(SDK_ARDUINO_SDK_BUILD_DIR)/variants/$(CONFIG_BOARD)/rtsmart/
+
 	@echo "Generate Arduino-core sdk done."
 
 arduino-sdk-clean:

@@ -6,7 +6,7 @@ import stat
 import zlib
 from dataclasses import dataclass
 from typing import List, Dict, Any, Optional, Tuple, Iterable
-from common import ImageHandler, Image, Partition, ImageError, run_command, prepare_image, parse_size, insert_data, TocInsertData
+from .common import ImageHandler, Image, Partition, ImageError, run_command, prepare_image, parse_size, insert_data, TocInsertData
 
 # 常量定义
 GPT_REVISION_1_0 = 0x00010000
@@ -1277,7 +1277,3 @@ class HdImageHandler(ImageHandler):
     def run(self, image: Image, config: Dict[str, Any]) -> None:
         self.setup(image, config)
         self.generate(image)
-
-
-def get_handler() -> ImageHandler:
-    return HdImageHandler()

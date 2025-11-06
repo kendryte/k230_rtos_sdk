@@ -1,21 +1,27 @@
 #!/usr/bin/env python3
 import os
 import sys
-import argparse
 import shutil
 import tempfile
+import importlib
 from typing import List, Dict, Optional, Any, Tuple
-from common import (
+
+from .common import (
     ImageError, Flash_type, Image, Partition, ImageHandler,
     run_command, parse_size
 )
 
+from .image_hd import HdImageHandler
+from .image_kd import KdImageHandler
+from .image_uffs import UffsHandler
+from .image_vfat import VFatHandler
+
 # image_type : type_handler
 HANDLERS = {
-    "vfat": "image_vfat",
-    "hdimage": "image_hd",
-    "kdimage": "image_kd",
-    "uffs": "image_uffs"
+    "hdimage": HdImageHandler,
+    "kdimage": KdImageHandler,
+    "uffs": UffsHandler,
+    "vfat": VFatHandler,
 }
 
 # TODO: Add config file support of 'include'
@@ -170,26 +176,6 @@ class GenImageTool:
 
         return config, i
 
-    def _load_handler(self, handler_type: str) -> Optional[ImageHandler]:
-        """Load specified type handler"""
-        if handler_type not in HANDLERS:
-            print(f"Error: unknown image type {handler_type}")
-            raise ValueError(f"Unknown image type {handler_type}")
-
-        module_name = HANDLERS[handler_type]
-        try:
-            print(f"handler import: {module_name}")
-            module = __import__(module_name)
-            if hasattr(module, 'get_handler'):
-                return module.get_handler()
-            else:
-                print(f"Error: module {module_name} does not have a get_handler function")
-                raise ValueError(f"Module {module_name} does not have a get_handler function")
-
-        except ImportError:
-            print(f"Error: could not load handler for {handler_type}")
-            raise ValueError(f"Could not load handler for {handler_type}")
-
     def _cal_image_size(self, image: Image, image_name: str) -> int:
         """Calculate file size"""
 
@@ -223,6 +209,12 @@ class GenImageTool:
 
         image_type = content.get('type')
 
+        try:
+            handler = HANDLERS[image_type]
+        except Exception as e:
+            print(f"An error occured {e}, maybe not support image type")
+            raise
+
         # Create image object
         image = Image(
             name=image_name,
@@ -237,8 +229,7 @@ class GenImageTool:
             exec_post=image_config.get('exec-post', None),
             handler_config=content.get('type_config', {}),
             # holes=image_config.get('holes', {}),
-
-            handler=self._load_handler(image_type)
+            handler=handler()
         )
 
         # Process flash type
@@ -414,15 +405,3 @@ class GenImageTool:
             shutil.rmtree(self.tmppath, ignore_errors=True)
             # pass
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--rootpath', required=True)
-    parser.add_argument('--outputpath', required=True)
-    parser.add_argument('--config', required=True)
-    args = parser.parse_args()
-
-    tool = GenImageTool(args.rootpath, args.outputpath, args.config)
-    tool.run()
-
-if __name__ == "__main__":
-    main()

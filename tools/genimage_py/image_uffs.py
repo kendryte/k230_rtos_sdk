@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import os
 import struct
-from common import ImageHandler, Image, ImageError, run_command, prepare_image, mountpath, parse_size, get_tool_path
 from typing import Dict, List, Optional
+from .common import ImageHandler, Image, ImageError, run_command, prepare_image, mountpath, parse_size, get_tool_path
 
 class UffsHandler(ImageHandler):
     """UFFS 文件系统处理器"""
@@ -129,6 +129,3 @@ class UffsHandler(ImageHandler):
         self.setup(image, config)
         self.parse(image, config)
         self.generate(image)
-
-def get_handler() -> UffsHandler:
-    return UffsHandler()

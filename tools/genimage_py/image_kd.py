@@ -8,7 +8,7 @@ import binascii
 import stat
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, Tuple, Iterable
-from common import ImageHandler, Image, Partition, ImageError, run_command, prepare_image, parse_size, insert_data, TocInsertData
+from .common import ImageHandler, Image, Partition, ImageError, run_command, prepare_image, parse_size, insert_data, TocInsertData
 
 # 常量定义
 KD_IMG_HDR_MAGIC = 0x27CB8F93  # "KDIM"
@@ -1050,7 +1050,3 @@ class KdImageHandler(ImageHandler):
         """执行镜像生成流程"""
         self.setup(image, config)
         self.generate(image)
-
-def get_handler() -> KdImageHandler:
-    """获取处理器实例"""
-    return KdImageHandler()

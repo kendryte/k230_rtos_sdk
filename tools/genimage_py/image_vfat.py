@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import os
 import struct
-from common import ImageHandler, Image, ImageError, run_command, Partition, prepare_image, mountpath, get_tool_path
 from typing import Dict, List, Optional, Any
+from .common import ImageHandler, Image, ImageError, run_command, Partition, prepare_image, mountpath, get_tool_path
 
 class VFatHandler(ImageHandler):
     """VFAT 文件系统处理器"""
@@ -136,7 +136,6 @@ class VFatHandler(ImageHandler):
             raise ImageError(f"查找最后有效位置失败: {str(e)}")
 
     def _get_child_image(self, parent_image: Image, name: str) -> Optional[Image]:
-        
         for dep in parent_image.dependencies:
             if dep.name == name:
                 return dep
@@ -145,6 +144,3 @@ class VFatHandler(ImageHandler):
     def run(self, image: Image, config: Dict[str, Any]):
         self.setup(image, config)
         self.generate(image)
-
-def get_handler() -> ImageHandler:
-    return VFatHandler()

@@ -33,7 +33,7 @@ gen_image()
 	local config="$1";
 	local image="$2";
 
-    python3 ${SDK_TOOLS_DIR}/genimage_py/genimage.py --rootpath "${SDK_BUILD_IMAGES_DIR}" --outputpath "${SDK_BUILD_DIR}" --config "${config}"
+    python3 ${SDK_TOOLS_DIR}/genimage.py --rootpath "${SDK_BUILD_IMAGES_DIR}" --outputpath "${SDK_BUILD_DIR}" --config "${config}"
 
     # Find the generated image file (could be .img or .kdimg)
     generated_image=$(find ${SDK_BUILD_DIR} -maxdepth 1 -type f \( -name "sysimage-sdcard.kdimg" -o -name "sysimage-sdcard.img" -o -name "sysimage-spinand.kdimg" -o -name "sysimage-spinor.kdimg"  \) | head -n 1)
