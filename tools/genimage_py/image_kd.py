@@ -6,6 +6,7 @@ import subprocess
 import hashlib
 import binascii
 import stat
+import tempfile
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, Tuple, Iterable
 from .common import ImageHandler, Image, Partition, ImageError, run_command, prepare_image, parse_size, insert_data, TocInsertData
@@ -356,6 +357,7 @@ class KdImageHandler(ImageHandler):
     def __init__(self):
         self.config: Dict[str, Any] = {}
         self.priv: KdPrivateData = KdPrivateData()
+        self.temp = str(tempfile.gettempdir())
 
     def _kburn_flag_flag(self, flag: int) -> int:
         return (flag >> 48) & 0xffff
@@ -752,12 +754,10 @@ class KdImageHandler(ImageHandler):
 
             if skip_insert:
                 continue
-
             # 写入数据
 
             print(f"write name: {part.name} offset: {part.offset} part_size: {part.size},write_offset: {image_write_offset}, child_size: {child_size}, aligned_child_size: {aligned_child_size}")
             insert_data(image, image_path, aligned_child_size, image_write_offset, padding_byte)
-
 
             # 生成分区记录
             part_record = KdImgPartRecord(
@@ -889,7 +889,7 @@ class KdImageHandler(ImageHandler):
             # 创建空的TOC分区 (保持不变)
             child_image = Image(
                 size = toc_size,
-                outfile = os.path.join(os.getenv('GENIMAGE_TMP'), "partition_toc")
+                outfile = os.path.join(self.temp, "partition_toc")
             )
             prepare_image(child_image, size=toc_size)
             print(f"write empty toc partition: {child_image.outfile} size {toc_size}")
@@ -927,7 +927,7 @@ class KdImageHandler(ImageHandler):
         # 创建TOC分区
         child_image = Image(
             size = toc_size,
-            outfile = os.path.join(os.getenv('GENIMAGE_TMP'), "partition_toc")
+            outfile = os.path.join(self.temp, "partition_toc")
         )
         prepare_image(child_image, size=toc_size)
 
@@ -957,12 +957,9 @@ class KdImageHandler(ImageHandler):
                 
             if i >= 4:
                 break
-                
             self._write_mbr_partition_entry(mbr_data, entry_offset, part)
-            
             entry_offset += 16
             i += 1
-        
         # 处理混合分区表
         if self.priv.table_type == TYPE_HYBRID and i < 4:
             self._write_hybrid_mbr_entry(mbr_data, entry_offset)
@@ -974,7 +971,7 @@ class KdImageHandler(ImageHandler):
         # 临时工作文件
         child_image = Image(
             size = 512,
-            outfile = os.path.join(os.getenv('GENIMAGE_TMP'), "partition_table_mbr")
+            outfile = os.path.join(self.temp, "partition_table_mbr")
         )
 
         prepare_image(child_image)
