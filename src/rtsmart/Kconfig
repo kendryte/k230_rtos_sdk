@@ -52,9 +52,10 @@ menu "RT-Smart Configuration"
             Now just support MMC device and MBR partition table.
 
         if RT_AUTO_RESIZE_PARTITION
-            config RT_AUTO_RESIZE_PARTITION_NR
-                int "Resize partition id"
-                default 2
+            config RT_PARTITION_NUMBER
+                int "RTSmart Filesystem Count"
+                default 3
+                range 2 3
         endif
 
     menu "RT-Thread Smart System Features"
