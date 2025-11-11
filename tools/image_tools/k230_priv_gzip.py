@@ -209,10 +209,10 @@ class K230PrivGzip:
         # --- 1. Compression Loop with Fallback ---
 
         for level in levels_to_try:
-            base_args = []
+            base_args = ["-n"] # Do not save or restore the original name and time stamp
 
             # Add compression level
-            base_args.append(f"-n{level}") # The shell script uses -n, assuming k230_priv_gzip supports this format
+            base_args.append(f"-{level}") # The shell script uses -n, assuming k230_priv_gzip supports this format
 
             # Add options (-f and -k from shell script)
             if keep_original:
