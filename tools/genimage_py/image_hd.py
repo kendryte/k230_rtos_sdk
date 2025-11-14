@@ -783,8 +783,8 @@ class HdImageHandler(ImageHandler):
 
         # 检查子镜像大小
         if child_size > part.size:
-            raise ImageError(f"分区 {part.name} 大小({part.size})小于子镜像 {child_image.name if child_image else part.image} 大小({child_size})")
-            
+            raise ImageError(f"分区 {part.name} 大小({part.size})小于子镜像 {part.image} 大小({child_size})")
+
         insert_data(image, image_path, part.size , part.offset, bytes(0))
     
     def _lba_to_chs(self, lba: int, chs: List[int]) -> None:
