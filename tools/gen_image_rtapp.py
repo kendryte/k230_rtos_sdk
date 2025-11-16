@@ -49,7 +49,8 @@ def main():
             print(f"An error occurred: {e}")
 
     if use_fake_rt_app:
-       rt_app_file_path = generate_fake_rt_app()
+        print("Use fake rtapp")
+        rt_app_file_path = generate_fake_rt_app()
 
     if rt_app_file_path is None:
         print(f"Generating RTApp unknown error")
@@ -65,6 +66,8 @@ def main():
     os.remove(rtapp_gzipped_file)
 
     rtapp_output_file = Path(rtapp_generate_images_dir) / "rtapp.elf.gz"
+    if rtapp_output_file.exists():
+        os.remove(rtapp_output_file)
 
     if not image_tools.generate_k230_image(rtapp_image_file, rtapp_output_file):
         print("RTApp generate image failed")
