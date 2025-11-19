@@ -37,7 +37,7 @@ class GenImageTool:
         self.outputpath: str = outputpath
         self.config_file: str = config_file
 
-        self.tmppath: str = str(tempfile.gettempdir())
+        self.tmppath: str = os.path.join(tempfile.gettempdir(), "genimage")
 
         self.imagepath: str = ""
     
