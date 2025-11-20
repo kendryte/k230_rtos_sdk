@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Any
 from .common import ImageHandler, Image, ImageError, run_command, Partition, prepare_image, mountpath, get_tool_path
 
 class VFatHandler(ImageHandler):
-    """VFAT 文件系统处理器"""
+    """VFAT filesystem handler"""
     type = "vfat"
     opts = ["extraargs", "label", "files", "minimize"]
 
@@ -14,42 +14,42 @@ class VFatHandler(ImageHandler):
 
     def setup(self, image: Image, config: Dict[str, str]) -> None:
         self.config = config
-        # 检查镜像大小
+        # Check image size
         if not image.size:
-            raise ImageError("未设置镜像大小或大小为零")
+            raise ImageError("Image size not set or zero")
 
         label = config.get("label", "")
         if label and len(label) > 11:
-            raise ImageError("vfat 卷标不能超过 11 个字符")
+            raise ImageError("VFAT volume label cannot exceed 11 characters")
 
     def generate(self, image: Image) -> None:
-        # 准备镜像文件
+        # Prepare image file
         prepare_image(image)
 
-        # 获取配置参数
+        # Get configuration parameters
         extraargs = self.config.get("extraargs", "")
         label = self.config.get("label", "")
         minimize = self.config.get("minimize", False)
 
-        # 构建标签参数
+        # Build label argument
         label_arg = f"-n {label}" if label else ""
 
-        # 执行 mkdosfs 创建 vfat 文件系统
+        # Execute mkdosfs to create vfat filesystem
         cmd = [get_tool_path("mkdosfs"), *extraargs.split(), *label_arg.split(), image.outfile]
-        # 过滤空字符串参数
+        # Filter empty string arguments
         cmd = [arg for arg in cmd if arg]
         run_command(cmd)
 
-        # 处理分区中的文件
+        # Process files in partitions
         for part in image.partitions:
             child_image = self._get_child_image(image, part.image)
             if not child_image:
-                raise ImageError(f"找不到子镜像: {part.image}")
+                raise ImageError(f"Child image not found: {part.image}")
 
             src_path = child_image.outfile
             target = part.name or os.path.basename(src_path)
 
-            # 创建目标目录（如果有子目录）
+            # Create target directory (if there are subdirectories)
             if '/' in target:
                 dir_path = os.path.dirname(target)
                 mmd_cmd = [get_tool_path("mmd"), "-DsS", "-i", image.outfile, f"::{dir_path}"]
@@ -57,13 +57,13 @@ class VFatHandler(ImageHandler):
                 env["MTOOLS_SKIP_CHECK"] = "1"
                 run_command(mmd_cmd, env=env)
 
-            # 复制文件到 vfat 镜像
+            # Copy files to vfat image
             mcopy_cmd = [get_tool_path("mcopy"), "-sp", "-i", image.outfile, src_path, f"::{target}"]
             env = os.environ.copy()
             env["MTOOLS_SKIP_CHECK"] = "1"
             run_command(mcopy_cmd, env=env)
 
-        # 如果不是空镜像且没有分区，复制 mountpath 中的文件
+        # If not empty image and no partitions, copy files from mountpath
         if not image.empty and not image.partitions:
             files = os.listdir(mountpath(image))
             if files:
@@ -73,16 +73,16 @@ class VFatHandler(ImageHandler):
                     env["MTOOLS_SKIP_CHECK"] = "1"
                     run_command(mcopy_cmd, env=env)
 
-        # 处理镜像最小化
+        # Handle image minimization
         if minimize:
             last_pos = self._find_last_valid_pos(image)
             if last_pos <= 0:
-                raise ImageError("无法找到有效的文件系统位置，最小化失败")
+                raise ImageError("Unable to find valid filesystem position, minimization failed")
 
-            # 获取当前文件大小
+            # Get current file size
             current_size = os.stat(image.outfile).st_size
 
-            # 截断文件到最小必要大小
+            # Truncate file to minimum necessary size
             if last_pos < current_size:
                 with open(image.outfile, 'r+b') as f:
                     f.truncate(last_pos)
@@ -92,15 +92,15 @@ class VFatHandler(ImageHandler):
 
     def _find_last_valid_pos(self, image: Image) -> int:
         """
-        查找最后一个有效簇的位置，用于最小化镜像。
-        增加 VFAT (FAT16/FAT32) 兼容性检查和腐败 FAT 字段的健壮性处理，
-        并修正 FAT16 簇的有效性判断逻辑。
+        Finds the position of the last valid cluster for image minimization.
+        Adds robust handling for VFAT (FAT16/FAT32) compatibility checks and corrupted FAT fields,
+        and corrects the validity check logic for FAT16 clusters.
         """
         try:
             with open(image.outfile, 'rb') as f:
                 current_file_size = os.fstat(f.fileno()).st_size
                 
-                # --- 读取引导扇区关键字段 ---
+                # --- Read Boot Sector Key Fields ---
                 f.seek(11); bytes_per_sector = struct.unpack('<H', f.read(2))[0]
                 f.seek(13); sectors_per_cluster = struct.unpack('<B', f.read(1))[0] 
                 f.seek(14); reserved_sectors = struct.unpack('<H', f.read(2))[0]
@@ -111,35 +111,35 @@ class VFatHandler(ImageHandler):
                 f.seek(32); total_sectors_32 = struct.unpack('<I', f.read(4))[0]
                 f.seek(36); sectors_per_fat_32 = struct.unpack('<I', f.read(4))[0]
 
-                # --- 1. 确定 FAT 扇区大小 (Handle corrupt FAT32 field) ---
+                # --- 1. Determine FAT Sector Size (Handle corrupt FAT32 field) ---
                 sectors_per_fat = 0
                 
-                # 尝试使用 FAT32 字段
+                # Try using the FAT32 fields
                 if sectors_per_fat_32 != 0:
                     fat_size_bytes_32 = sectors_per_fat_32 * bytes_per_sector
                     total_fat_region_size_32 = reserved_sectors * bytes_per_sector + num_fats * fat_size_bytes_32
                     
-                    # 如果 FAT32 计算的大小超过实际文件大小，说明该字段腐败，回退。
+                    # If the size calculated by FAT32 exceeds the actual file size, the field is corrupt, fall back.
                     if total_fat_region_size_32 > current_file_size:
                         print("DEBUG: FAT32 sector count appears corrupt. Falling back to FAT16 field.")
                     else:
                         sectors_per_fat = sectors_per_fat_32
 
-                # 如果 FAT32 字段无效或腐败，使用 FAT16 字段
+                # If FAT32 field is invalid or corrupt, use FAT16 field
                 if sectors_per_fat == 0 and sectors_per_fat_16 != 0:
                     sectors_per_fat = sectors_per_fat_16
 
                 if sectors_per_fat == 0:
                     raise ImageError(f"FAT sector count is zero or invalid.")
 
-                # 使用确定的 sectors_per_fat 最终计算关键参数
+                # Use the determined sectors_per_fat to finalize key parameter calculation
                 fat_size_bytes = sectors_per_fat * bytes_per_sector
-                total_fat_region_size = reserved_sectors * bytes_per_sector + num_fats * fat_size_bytes
+                total_fat_region_size = reserved_sectors * bytes_per_sector + num_fats * sectors_per_fat * bytes_per_sector
                 
                 if total_fat_region_size > current_file_size:
                     raise ImageError(f"Calculated total FAT region size ({total_fat_region_size}) exceeds image size ({current_file_size}). Cannot minimize.")
                 
-                # --- 2. 确定 FAT 类型 (FAT Type Detection) ---
+                # --- 2. Determine FAT Type (FAT Type Detection) ---
                 total_sectors = total_sectors_32 if total_sectors_32 != 0 else total_sectors_16
                 if total_sectors == 0:
                     raise ImageError("Total sectors count is zero or invalid.")
@@ -152,24 +152,23 @@ class VFatHandler(ImageHandler):
                 entry_bytes = 4
                 mask = 0x0FFFFFFF
                 
-                # FAT32 簇值判断：只要不是 0x00000000 (可用) 且 小于 0x0FFFFFF8 (链结束)，就是有效的。
+                # FAT32 cluster value check: it is valid as long as it's not 0x00000000 (free) AND less than 0x0FFFFFF8 (end of chain).
                 is_used = lambda entry: entry != 0x00000000 and entry < 0x0FFFFFF8
                 
                 if total_clusters < 4085:
-                    # 理论上是 FAT12，但我们将其视为无法支持
+                    # Theoretically FAT12, but we treat it as unsupported
                     raise ImageError("FAT12 not supported for minimization.")
                 elif total_clusters < 65525:
                     # FAT16
                     fat_type = "FAT16"
                     entry_bytes = 2
                     mask = 0xFFFF
-                    # FAT16 簇值判断：只要不是 0x0000 (可用) 或 0x0001 (保留) 
-                    # 那么它就是已分配或已使用的簇，包括链结束标记 (0xFFF8-0xFFFF)。
+                    # FAT16 cluster value check: it is considered an allocated or used cluster, including the end-of-chain marker (0xFFF8-0xFFFF), as long as it's not 0x0000 (free) OR 0x0001 (reserved).
                     is_used = lambda entry: entry >= 0x0002
 
                 print(f"DEBUG: Detected FAT Type: {fat_type} (Total Clusters: {total_clusters})")
 
-                # --- 3. 计算偏移量和迭代 (FAT Iteration) ---
+                # --- 3. Calculate Offsets and Iterate (FAT Iteration) ---
                 data_region_offset = total_fat_region_size
                 cluster_size_bytes = sectors_per_cluster * bytes_per_sector
                 fat_offset = reserved_sectors * bytes_per_sector
@@ -177,7 +176,7 @@ class VFatHandler(ImageHandler):
                 num_entries = fat_size_bytes // entry_bytes 
                 last_used_cluster = 0
                 
-                # 遍历 FAT 表查找最后一个使用的簇（从簇 2 开始）
+                # Iterate through the FAT table to find the last used cluster (starting from cluster 2)
                 for cluster in range(2, num_entries):
                     read_offset = fat_offset + cluster * entry_bytes
                     
@@ -200,12 +199,12 @@ class VFatHandler(ImageHandler):
                 if last_used_cluster == 0:
                     return -1
 
-                # 计算最后一个簇的结束位置
+                # Calculate the end position of the last cluster
                 final_offset = data_region_offset + (last_used_cluster + 1) * cluster_size_bytes
                 print(f"DEBUG: Last used cluster: {last_used_cluster}")
                 return final_offset
         except Exception as e:
-            raise ImageError(f"查找最后有效位置失败: {type(e).__name__} - {str(e)}")
+            raise ImageError(f"Failed to find last valid position: {type(e).__name__} - {str(e)}")
         
             
     def _get_child_image(self, parent_image: Image, name: str) -> Optional[Image]:

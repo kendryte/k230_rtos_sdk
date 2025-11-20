@@ -5,6 +5,7 @@ import shutil
 import tempfile
 import importlib
 from typing import List, Dict, Optional, Any, Tuple
+from pathlib import Path
 
 from .common import (
     ImageError, Flash_type, Image, Partition, ImageHandler,
@@ -57,7 +58,7 @@ class GenImageTool:
         lines = []
         for line in content.split('\n'):
             line = line.strip()
-            # 分割行，保留#前的部分并去除两端空格
+            # Split line, keep part before # and strip whitespace
             if '#' in line:
                 line = line.split('#', 1)[0].strip()
             if line:
@@ -212,7 +213,7 @@ class GenImageTool:
         try:
             handler = HANDLERS[image_type]
         except Exception as e:
-            print(f"An error occured {e}, maybe not support image type")
+            print(f"An error occurred {e}, maybe not support image type")
             raise
 
         # Create image object
@@ -306,12 +307,12 @@ class GenImageTool:
                         ecc_option=content.get('ecc-option', 3),
                         ecc_size=content.get('ecc-size', 0)
                     )
-                    # print(f"Flash_type: {lash_type}")
+                    # print(f"Flash_type: {flash_type}")
 
                     image.flash_type = flash_type
                     break
             else:
-                raise ImageError(f"Image {image.name} flash type {flash_block['name']} not found")
+                raise ImageError(f"Image {image.name} flash type {flash_blocks['name']} not found")
     
     def _process_partition_block(self, image: Image, block: Dict[str, Any]) -> None:
         """Process image partition"""
@@ -357,11 +358,14 @@ class GenImageTool:
         # print(f"partition: {partition}")
 
         image.partitions.append(partition)
-    
+
     def _creat_work_dir(self) -> None:
         """Create working directory"""
-        shutil.copytree(f"{self.rootpath}", f"{self.tmppath}/root")
-    
+        target_dir = Path(self.tmppath) / "root"
+        if target_dir.exists():
+            shutil.rmtree(target_dir)
+        shutil.copytree(f"{self.rootpath}", str(target_dir))
+
     def run(self) -> None:
         """Run image generation tool"""
         try:
@@ -404,4 +408,3 @@ class GenImageTool:
             # Clean up temporary files
             shutil.rmtree(self.tmppath, ignore_errors=True)
             # pass
-

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import List, Dict, Any, Optional, Tuple, Iterable
 from .common import ImageHandler, Image, Partition, ImageError, run_command, prepare_image, parse_size, insert_data, TocInsertData
 
-# 常量定义
+# Constant definitions
 GPT_REVISION_1_0 = 0x00010000
 GPT_SECTORS = 33
 GPT_ENTRIES = 128
@@ -25,7 +25,7 @@ TYPE_HYBRID = TYPE_MBR | TYPE_GPT
 PARTITION_TYPE_EXTENDED = 0x0f
 
 GPT_PARTITION_TYPES = {
-    # 基础类型
+    # Basic types
     "L": "0fc63daf-8483-4772-8e79-3d69d8477de4",
     "linux": "0fc63daf-8483-4772-8e79-3d69d8477de4",
     "S": "0657fd6d-a4ab-43c4-84e5-0933c84b4f4f",
@@ -41,7 +41,7 @@ GPT_PARTITION_TYPES = {
     "F": "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7",
     "fat32": "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7",
 
-    # 特殊分区
+    # Special partitions
     "barebox-state": "4778ed65-bf42-45fa-9c5b-287a1dc4aab1",
     "barebox-env": "6c3737f2-07f8-45d1-ad45-15d260aab24d",
     "esp": "c12a7328-f81f-11d2-ba4b-00a0c93ec93b",
@@ -52,7 +52,7 @@ GPT_PARTITION_TYPES = {
     "user-home": "773f91ef-66d4-49b5-bd83-d683bf40ad16",
     "linux-generic": "0fc63daf-8483-4772-8e79-3d69d8477de4",
 
-    # 根分区 (Discoverable Partitions Specification)
+    # Root partitions (Discoverable Partitions Specification)
     "root-alpha": "6523f8ae-3eb1-4e2a-a05a-18b695ae656f",
     "root-arc": "d27f46ed-2919-4cb8-bd25-9531f3c16534",
     "root-arm": "69dad710-2ce4-4e3c-b16c-21a1d49abed3",
@@ -75,7 +75,7 @@ GPT_PARTITION_TYPES = {
     "root-x86": "44479540-f297-41b2-9af7-d131d5f0458a",
     "root-x86-64": "4f68bce3-e8cd-4db1-96e7-fbcaf984b709",
 
-    # 用户分区
+    # User partitions
     "usr-alpha": "e18cf08c-33ec-4c0d-8246-c6c6fb3da024",
     "usr-arc": "7978a683-6316-4922-bbee-38bff5a2fecc",
     "usr-arm": "7d0359a3-02b3-4f0a-865c-654403e70625",
@@ -98,7 +98,7 @@ GPT_PARTITION_TYPES = {
     "usr-x86": "75250d76-8cc6-458e-bd66-bd47cc81a812",
     "usr-x86-64": "8484680c-9521-48c6-9c11-b0720656f69e",
 
-    # Verity 验证分区
+    # Verity verification partitions
     "root-alpha-verity": "fc56d9e9-e6e5-4c06-be32-e74407ce09a5",
     "root-arc-verity": "24b2d975-0f97-4521-afa1-cd531e421b8d",
     "root-arm-verity": "7386cdf2-203c-47a9-a498-f2ecce45a2d6",
@@ -121,7 +121,7 @@ GPT_PARTITION_TYPES = {
     "root-x86-64-verity": "2c7357ed-ebd2-46d9-aec1-23d437ec2bf5",
     "root-x86-verity": "d13c5d3b-b5d1-422a-b29f-9454fdc89d76",
 
-    # 用户空间Verity验证
+    # User space Verity verification
     "usr-alpha-verity": "8cce0d25-c0d0-4a44-bd87-46331bf1df67",
     "usr-arc-verity": "fca0598c-d880-4591-8c16-4eda05c7347c",
     "usr-arm-verity": "c215d751-7bcd-4649-be90-6627490a4c05",
@@ -144,7 +144,7 @@ GPT_PARTITION_TYPES = {
     "usr-x86-64-verity": "77ff5f63-e7b6-4633-acf4-1565b864c0e6",
     "usr-x86-verity": "8f461b0d-14ee-4e81-9aa9-049b6fb97abd",
 
-    # 签名验证分区
+    # Signature verification partitions
     "root-alpha-verity-sig": "d46495b7-a053-414f-80f7-700c99921ef8",
     "root-arc-verity-sig": "143a70ba-cbd3-4f06-919f-6c05683a78bc",
     "root-arm-verity-sig": "42b0455f-eb11-491d-98d3-56145ba9d037",
@@ -167,7 +167,7 @@ GPT_PARTITION_TYPES = {
     "root-x86-64-verity-sig": "41092b05-9fc8-4523-994f-2def0408b176",
     "root-x86-verity-sig": "5996fc05-109c-48de-808b-23fa0830b676",
 
-    # 用户空间签名验证
+    # User space signature verification
     "usr-alpha-verity-sig": "5c6e1c76-076a-457a-a0fe-f3b4cd21ce6e",
     "usr-arc-verity-sig": "94f9a9a1-9971-427a-a400-50cb297f0f35",
     "usr-arm-verity-sig": "d7ff812f-37d1-4902-a810-d76ba57b975a",
@@ -183,14 +183,14 @@ GPT_PARTITION_TYPES = {
     "usr-ppc64-verity-sig": "0b888863-d7f8-4d9e-9766-239fce4d58af",
     "usr-ppc-verity-sig": "7007891d-d371-4a80-86a4-5cb875b9302e",
     "usr-riscv32-verity-sig": "c3836a13-3137-45ba-b583-b16c50fe5eb4",
-    "usr-riscv64-verity-sig": "d2f9000a-7a18-453f-b5cd-4d32f77a7b32",
-    "usr-s390-verity-sig": "17440e4f-a8d0-467f-a46e-3912ae6ef2c5",
-    "usr-s390x-verity-sig": "3f324816-667b-46ae-86ee-9b0c0c6c11b4",
-    "usr-tilegx-verity-sig": "4ede75e2-6ccc-4cc8-b9c7-70334b087510",
-    "usr-x86-64-verity-sig": "e7bb33fb-06cf-4e81-8273-e543b413e2e2",
-    "usr-x86-verity-sig": "974a71c0-de41-43c3-be5d-5c5ccd1ad2c0",
+    "usr-riscv64-verity-sig": "8f1056be-9b05-47c4-81d6-be53128e5b54",
+    "usr-s390-verity-sig": "b663c618-e7bc-4d6d-90aa-11b756bb1797",
+    "usr-s390x-verity-sig": "31741cc4-1a2a-4111-a581-e00b447d2d06",
+    "usr-tilegx-verity-sig": "2fb4bf56-07fa-42da-8132-6b139f2026ae",
+    "usr-x86-64-verity-sig": "77ff5f63-e7b6-4633-acf4-1565b864c0e6",
+    "usr-x86-verity-sig": "8f461b0d-14ee-4e81-9aa9-049b6fb97abd",
 
-    # 特殊分区
+    # Special partitions
     "esp": "c12a7328-f81f-11d2-ba4b-00a0c93ec93b",
     "xbootldr": "bc13c2ff-59e6-4262-a352-b275fd6f7172",
     "srv": "3b8f8425-20e0-4f3b-907f-1a25a76f98e8",
@@ -203,7 +203,7 @@ GPT_PARTITION_TYPES = {
 
 @dataclass
 class MbrPartitionEntry:
-    """MBR分区表项结构"""
+    """MBR partition table entry structure"""
     boot: int = 0
     first_chs: List[int] = None
     partition_type: int = 0
@@ -219,7 +219,7 @@ class MbrPartitionEntry:
 
 @dataclass
 class GptPartitionEntry:
-    """GPT分区表项结构"""
+    """GPT partition table entry structure"""
     type_uuid: bytes = b''
     uuid: bytes = b''
     first_lba: int = 0
@@ -237,7 +237,7 @@ class GptPartitionEntry:
 
 @dataclass
 class GptHeader:
-    """GPT头部结构"""
+    """GPT header structure"""
     signature: bytes = b'EFI PART'
     revision: int = GPT_REVISION_1_0
     header_size: int = 92
@@ -259,7 +259,7 @@ class GptHeader:
 
 @dataclass
 class HdPrivateData:
-    """硬盘镜像处理器私有数据类"""
+    """Hard disk image handler private data class"""
     extended_partition_index: int = 0
     extended_partition: Optional[Partition] = None
     align: int = 512
@@ -275,7 +275,7 @@ class HdPrivateData:
     toc_num: int = 0
 
 class HdImageHandler(ImageHandler):
-    """硬盘镜像处理器，支持MBR、GPT和混合分区表"""
+    """Hard disk image handler, supports MBR, GPT and hybrid partition tables"""
     type = "hdimage"
     opts = [
         "align", "extended-partition", "partition-table-type",
@@ -288,24 +288,24 @@ class HdImageHandler(ImageHandler):
         self.priv: HdPrivateData = HdPrivateData()
     
     def _parse_size(self, size: Any) -> int:
-        """解析带单位的大小字符串（K, M, G）"""
+        """Parse size string with units (K, M, G)"""
         if isinstance(size, int):
             return size
         if not isinstance(size, str):
-            raise ImageError(f"无效的大小格式: {size}")
+            raise ImageError(f"Invalid size format: {size}")
         
         return parse_size(size)
     
     @staticmethod
     def _roundup(value: int, align: int) -> int:
-        """向上取整到对齐边界"""
+        """Round up to alignment boundary"""
         if align == 0:
             return value
         return ((value - 1) // align + 1) * align
     
     @staticmethod
     def _rounddown(value: int, align: int) -> int:
-        """向下取整到对齐边界"""
+        """Round down to alignment boundary"""
         if align == 0:
             return value
         return value - (value % align)
@@ -314,65 +314,65 @@ class HdImageHandler(ImageHandler):
 
         self.config = config
         
-        # 处理块设备
+        # Handle block device
         self._handle_block_device(image)
         
-        # 解析配置参数
+        # Parse configuration parameters
         self._parse_config_parameters(config)
         
-        # 验证配置参数
+        # Validate configuration parameters
         self._validate_config_parameters()
         
-        # 设置逻辑分区
+        # Set up logical partitions
         self._setup_logical_partitions(image)
 
-        # 处理磁盘UUID和签名
+        # Handle disk UUID and signature
         self._setup_uuid(image, config)
 
-        # 混合分区表校验
+        # Hybrid partition table validation
         self._validate_hybrid_partition_table(image)
 
-        # 计算分区偏移和大小
+        # Calculate partition offsets and sizes
         self._calculate_partition_offsets(image)
 
     
     def _handle_block_device(self, image: Image) -> None:
-        """处理块设备，自动获取其大小"""
+        """Handle block device, automatically get its size"""
         if os.path.exists(image.outfile):
             try:
-                # 获取文件的统计信息
+                # Get file statistics
                 stat_info = os.stat(image.outfile)
-                # 检查是否是块设备
+                # Check if it's a block device
                 if stat_info.st_mode & stat.S_ISBLK(stat_info.st_mode):
                     if image.size != 0:
-                        raise ImageError("块设备目标不允许指定镜像大小")
+                        raise ImageError("Block device target does not allow specifying image size")
                     
                     try:
                         with open(image.outfile, 'rb') as f:
                             f.seek(0, os.SEEK_END)
                             image.size = f.tell()
                     except OSError as e:
-                        raise ImageError(f"无法获取块设备 {image.outfile} 的大小: {str(e)}")
+                        raise ImageError(f"Unable to get size of block device {image.outfile}: {str(e)}")
                     
                     if image.size <= 0:
-                        raise ImageError(f"块设备 {image.outfile} 大小无效: {image.size}")
+                        raise ImageError(f"Block device {image.outfile} size is invalid: {image.size}")
             except OSError as e:
-                raise ImageError(f"无法获取文件 {image.outfile} 的统计信息: {str(e)}")
+                raise ImageError(f"Unable to get statistics for file {image.outfile}: {str(e)}")
 
     
     def _parse_config_parameters(self, config: Dict[str, Any]) -> None:
-        """解析配置参数到私有数据结构"""
+        """Parse configuration parameters to private data structure"""
         self.priv.align = self._parse_size(config.get("align", 512))
         self.priv.extended_partition_index = int(config.get("extended-partition", 0))
         self.priv.gpt_location = self._parse_size(config.get("gpt-location", 2 * 512))
         self.priv.gpt_no_backup = config.get("gpt-no-backup", False)
         self.priv.fill = config.get("fill", False)
 
-        # 解析TOC配置
+        # Parse TOC configuration
         self.priv.toc_enable = config.get("toc", False)
         self.priv.toc_offset = self._parse_size(config.get("toc-offset", 0))
         
-        # 解析分区表类型
+        # Parse partition table type
         table_type = config.get("partition-table-type", "mbr")
         if table_type == "none":
             self.priv.table_type = TYPE_NONE
@@ -383,102 +383,102 @@ class HdImageHandler(ImageHandler):
         elif table_type == "hybrid":
             self.priv.table_type = TYPE_HYBRID
         else:
-            raise ImageError(f"无效的分区表类型: {table_type}")
+            raise ImageError(f"Invalid partition table type: {table_type}")
         
-        # 处理已弃用的配置
+        # Handle deprecated configuration
         self._handle_deprecated_config(config)
     
     def _handle_deprecated_config(self, config: Dict[str, Any]) -> None:
-        """处理已弃用的配置参数"""
+        """Handle deprecated configuration parameters"""
         if "partition-table" in config:
             self.priv.table_type = TYPE_MBR if config["partition-table"] else TYPE_NONE
-            print("警告: 'partition-table' 已弃用，请使用 'partition-table-type'")
+            print("Warning: 'partition-table' is deprecated, please use 'partition-table-type'")
         if "gpt" in config:
             self.priv.table_type = TYPE_GPT if config["gpt"] else TYPE_MBR
-            print("警告: 'gpt' 已弃用，请使用 'partition-table-type'")
+            print("Warning: 'gpt' is deprecated, please use 'partition-table-type'")
     
     def _validate_config_parameters(self) -> None:
-        """验证配置参数的有效性"""
-        # 验证对齐参数
+        """Validate configuration parameters"""
+        # Validate alignment parameters
         if (self.priv.table_type != TYPE_NONE and 
             (self.priv.align % 512 != 0 or self.priv.align == 0)):
-            raise ImageError(f"分区对齐({self.priv.align})必须是512字节的倍数")
+            raise ImageError(f"Partition alignment ({self.priv.align}) must be a multiple of 512 bytes")
         
-        # 验证GPT位置
+        # Validate GPT location
         if self.priv.gpt_location % 512 != 0:
-            raise ImageError(f"GPT表位置({self.priv.gpt_location})必须是512字节的倍数")
+            raise ImageError(f"GPT table location ({self.priv.gpt_location}) must be a multiple of 512 bytes")
     
     def _setup_uuid(self, image: Image, config: Dict[str, Any]) -> None:
-        """设置磁盘UUID和签名"""
-        # 处理磁盘UUID
+        """Setup disk UUID and signature"""
+        # Handle disk UUID
         if "disk-uuid" in config:
             try:
                 uuid.UUID(config["disk-uuid"])
                 self.priv.disk_uuid = config["disk-uuid"]
             except ValueError:
-                raise ImageError(f"无效的磁盘UUID: {config['disk-uuid']}")
+                raise ImageError(f"Invalid disk UUID: {config['disk-uuid']}")
         
-        # 处理磁盘签名
+        # Handle disk signature
         disk_signature = config.get("disk-signature")
         if disk_signature == "random":
-            self.priv.disksig = uuid.getnode() & 0xFFFFFFFF  # 随机32位值
+            self.priv.disksig = uuid.getnode() & 0xFFFFFFFF  # Random 32-bit value
         elif disk_signature:
             if not (self.priv.table_type & TYPE_MBR):
-                raise ImageError("'disk-signature' 仅对MBR和混合分区表有效")
+                raise ImageError("'disk-signature' is only valid for MBR and hybrid partition tables")
             try:
                 self.priv.disksig = int(disk_signature, 0)
             except ValueError:
-                raise ImageError(f"无效的磁盘签名: {disk_signature}")
+                raise ImageError(f"Invalid disk signature: {disk_signature}")
     
     def _validate_hybrid_partition_table(self, image: Image) -> None:
-        """验证混合分区表的有效性"""
+        """Validate hybrid partition table validity"""
         if self.priv.table_type == TYPE_HYBRID:
             hybrid_entries = sum(1 for p in image.partitions 
                                 if p.in_partition_table and p.partition_type)
-            print(f"混合分区表: {hybrid_entries} 个分区")
+            print(f"Hybrid partition table: {hybrid_entries} partitions")
             if hybrid_entries == 0:
-                raise ImageError("混合分区表必须包含至少一个带partition-type的分区")
+                raise ImageError("Hybrid partition table must contain at least one partition with partition-type")
             if hybrid_entries > 3:
-                raise ImageError(f"混合分区表最多支持3个分区，当前有{hybrid_entries}个")
+                raise ImageError(f"Hybrid partition table supports max 3 partitions, currently has {hybrid_entries}")
 
     def _parse_partition_config(self, idx: int, part: Partition) -> None:
-        """解析单个分区配置"""
-        # 检查分区类型配置是否与分区表类型匹配
+        """Parse single partition configuration"""
+        # Check if partition type configuration matches partition table type
         if part.partition_type_uuid and not (self.priv.table_type & TYPE_GPT):
-            raise ImageError(f"分区 {part.name}: partition-type-uuid 仅对GPT和混合分区表有效")
+            raise ImageError(f"Partition {part.name}: partition-type-uuid is only valid for GPT and hybrid partition tables")
         
         if part.partition_type and not (self.priv.table_type & TYPE_MBR):
-            raise ImageError(f"分区 {part.name}: partition-type 仅对MBR和混合分区表有效")
+            raise ImageError(f"Partition {part.name}: partition-type is only valid for MBR and hybrid partition tables")
             
     
     def generate(self, image: Image) -> None:
 
         try:
-            # 准备镜像文件
+            # Prepare image file
             prepare_image(image)
 
             
-            # 确保扩展分区索引已设置
+            # Ensure extended partition index is set
             self._ensure_extended_partition_index(image)
 
-            # 写入分区数据
+            # Write partition data
             for part in image.partitions:
                 self._write_partition_data(image, part)
             
-            # 写入分区表
+            # Write partition table
             if self.priv.table_type & TYPE_GPT:
                 self._write_gpt(image)
             elif self.priv.table_type & TYPE_MBR:
                 self._write_mbr(image)
 
-            # 写入TOC
+            # Write TOC
             self._write_toc(image)
 
         except Exception as e:
-            raise ImageError(f"生成镜像失败: {str(e)}")
+            raise ImageError(f"Failed to generate image: {str(e)}")
     
     def _ensure_extended_partition_index(self, image: Image) -> None:
-        """确保扩展分区索引已设置"""
+        """Ensure extended partition index is set"""
         if self.priv.extended_partition_index:
             return
             
@@ -492,9 +492,9 @@ class HdImageHandler(ImageHandler):
                 self.priv.extended_partition_index = 4
     
     def _setup_logical_partitions(self, image: Image) -> None:
-        """设置逻辑分区和扩展分区"""
+        """Setup logical partitions and extended partition"""
         if self.priv.extended_partition_index > 4:
-            raise ImageError(f"无效的扩展分区索引({self.priv.extended_partition_index})，必须≤4")
+            raise ImageError(f"Invalid extended partition index ({self.priv.extended_partition_index}), must be <= 4")
         
         if self.priv.table_type != TYPE_MBR:
             return
@@ -514,7 +514,7 @@ class HdImageHandler(ImageHandler):
                 
             count += 1
             if self.priv.extended_partition_index == count:
-                # 创建扩展分区
+                # Create extended partition
                 offset = part.offset - self.priv.align if part.offset else 0
                 extended_part = Partition(
                     name="[Extended]",
@@ -539,30 +539,30 @@ class HdImageHandler(ImageHandler):
             else:
                 mbr_entries += 1
             
-            # 校验强制主分区位置
+            # Validate forced primary partition position
             if part.forced_primary:
                 if not found_extended:
-                    raise ImageError(f"分区 {part.name}: forced-primary 只能用于扩展分区之后的分区")
+                    raise ImageError(f"Partition {part.name}: forced-primary can only be used for partitions after the extended partition")
             elif not in_extended and found_extended:
-                raise ImageError(f"在强制主分区后不能创建非主分区 {part.name}")
+                raise ImageError(f"Cannot create a non-primary partition {part.name} after a forced primary partition")
             
             if mbr_entries > 4:
-                raise ImageError("主分区数量过多（最多4个）")
+                raise ImageError("Too many primary partitions (max 4)")
     
     def _calculate_partition_offsets(self, image: Image) -> None:
-        """计算分区偏移和大小"""
+        """Calculate partition offsets and sizes"""
         now = 0
         gpt_backup = None
         self.priv.file_size = 0
         
-        # 为分区表预留空间
+        # Reserve space for partition table
         if self.priv.table_type != TYPE_NONE:
-            # MBR分区表
+            # MBR partition table
             mbr = Partition(name="[MBR]",parent_image=image.name, offset=512 - 72, size=72, in_partition_table=False)
             image.partitions.append(mbr)
             now = mbr.offset + mbr.size
             
-            # GPT分区表
+            # GPT partition table
             if self.priv.table_type & TYPE_GPT:
                 print("Create GPT")
                 gpt_header = Partition(
@@ -583,7 +583,7 @@ class HdImageHandler(ImageHandler):
                 image.partitions.append(gpt_array)
                 now = max(now, gpt_array.offset + gpt_array.size)
                 
-                # GPT备份分区
+                # GPT backup partition
                 backup_size = GPT_SECTORS * 512
                 backup_offset = image.size - backup_size if image.size else 0
                 gpt_backup = Partition(
@@ -595,23 +595,23 @@ class HdImageHandler(ImageHandler):
                 )
                 image.partitions.append(gpt_backup)
 
-        # 处理TOC
+        # Handle TOC
         if self.priv.toc_enable:
             self._setup_toc_partitions(image)
 
-        # 处理自动调整分区
+        # Handle autoresize partitions
         self._setup_autoresize_partitions(image)
         
-        # 计算每个分区的偏移和大小
+        # Calculate offset and size for each partition
         for part in image.partitions:
             
-            # 设置分区对齐
+            # Set partition alignment
             if not part.align:
                 part.align = self.priv.align if (part.in_partition_table or 
                                                   self.priv.table_type == TYPE_NONE) else 1
-            # 检查对齐
+            # Check alignment
             if part.in_partition_table and ((part.align % self.priv.align) != 0):
-                raise ImageError(f"分区 {part.name} 的对齐({part.align})必须是镜像对齐({self.priv.align})的倍数")
+                raise ImageError(f"Partition {part.name} alignment ({part.align}) must be a multiple of image alignment ({self.priv.align})")
             
             self._parse_partition_config(image, part)
 
@@ -624,7 +624,7 @@ class HdImageHandler(ImageHandler):
                 child_size = os.path.getsize(image_path)
                 part.size = self._roundup(child_size, part.align) if part.in_partition_table else child_size
       
-            # 逻辑分区预留EBR空间
+            # Reserve EBR space for logical partitions
             if part.logical:
                 now += self.priv.align
                 now = self._roundup(now, part.align)
@@ -633,37 +633,37 @@ class HdImageHandler(ImageHandler):
                 now += part.size
                 part.offset = _roundup(now, 4096) - part.size
 
-            # 设置偏移
+            # Set offset
             if not part.offset and (part.in_partition_table or self.priv.table_type == TYPE_NONE):
                 part.offset = self._roundup(now, part.align)
             
-            # 检查偏移是否符合对齐要求
+            # Check if offset meets alignment requirements
             if part.offset % part.align != 0:
-                raise ImageError(f"分区 {part.name} 偏移({part.offset})必须是{part.align}字节的倍数")
+                raise ImageError(f"Partition {part.name} offset ({part.offset}) must be a multiple of {part.align} bytes")
             
-            # 确保分区大小有效
+            # Ensure partition size is valid
             if not part.size and part != self.priv.extended_partition:
-                raise ImageError(f"分区 {part.name} 大小不能为零")
+                raise ImageError(f"Partition {part.name} size cannot be zero")
             
-            # 检查分区重叠
+            # Check for partition overlap
             if not part.logical and self._check_overlap(image, part):
-                raise ImageError(f"分区 {part.name} 与之前的分区重叠")
+                raise ImageError(f"Partition {part.name} overlaps with a previous partition")
 
-            # 检查分区大小是否为512字节倍数
+            # Check if partition size is a multiple of 512 bytes
             if part.in_partition_table and part.size % 512 != 0:
-                raise ImageError(f"分区 {part.name} 大小({part.size})必须是512字节的倍数")
+                raise ImageError(f"Partition {part.name} size ({part.size}) must be a multiple of 512 bytes")
             
-            # 更新当前位置
+            # Update current position
             if part.offset + part.size > now:
                 now = part.offset + part.size
 
-            # 更新文件大小
+            # Update file size
             if part.image:
                 child_size = self._get_child_image_size(image, part.image)
                 if part.offset + child_size > self.priv.file_size:
                     self.priv.file_size = part.offset + child_size
 
-            # 更新扩展分区大小
+            # Update extended partition size
             if part.logical :
                 file_size = part.offset - self.priv.align + 512
                 if file_size > self.priv.file_size:
@@ -671,78 +671,78 @@ class HdImageHandler(ImageHandler):
 
                 self.priv.extended_partition.size = now - self.priv.extended_partition.offset
                 
-        # 确保镜像大小足够
+        # Ensure image size is sufficient
         if not image.size:
             image.size = now
         
         print(f"image size: {image.size},now size: {now}")
         if now > image.size:
-            raise ImageError("分区大小超过镜像大小")
+            raise ImageError("Partition size exceeds image size")
         
-        # 最终文件大小确定
+        # Final file size determination
         if self.priv.fill or ((self.priv.table_type & TYPE_GPT) and not self.priv.gpt_no_backup):
             self.priv.file_size = image.size
             print(f"update file size: {self.priv.file_size}")
 
     
     def _setup_autoresize_partitions(self, image: Image) -> None:
-        """处理自动调整大小的分区"""
+        """Handle auto-resizing partitions"""
         resized = False
         for part in image.partitions:
             if not part.autoresize:
                 continue
             
             if resized:
-                raise ImageError("仅支持一个自动调整大小的分区")
+                raise ImageError("Only one auto-resizing partition is supported")
             if image.size == 0:
-                raise ImageError("使用自动调整分区时必须指定镜像大小")
+                raise ImageError("Image size must be specified when using auto-resizing partitions")
             
-            # 计算可用空间
+            # Calculate available space
             partsize = image.size - part.offset
             if self.priv.table_type & TYPE_GPT:
-                partsize -= GPT_SECTORS * 512  # 减去GPT备份区域
+                partsize -= GPT_SECTORS * 512  # Subtract GPT backup area
             
-            # 对齐调整
+            # Alignment adjustment
             partsize = self._rounddown(partsize, part.align or self.priv.align)
             
             if partsize <= 0:
-                raise ImageError("分区超出设备大小")
+                raise ImageError("Partition exceeds device size")
             if partsize < part.size:
-                raise ImageError(f"自动调整分区 {part.name} 大小({partsize})小于最小值({part.size})")
+                raise ImageError(f"Auto-resizing partition {part.name} size ({partsize}) is smaller than minimum size ({part.size})")
             
             part.size = partsize
             resized = True
 
     
     def _check_overlap(self, image: Image, part: Partition) -> bool:
-        """检查分区是否重叠"""
+        """Check if partitions overlap"""
         for other in image.partitions:
             if part == other:
                 return False
             
             print(f"check overlap {part.name} {other.name}")
-            # 检查是否完全不重叠
+            # Check if they are completely non-overlapping
             if part.offset >= other.offset + other.size:
                 continue
             if other.offset >= part.offset + part.size:
                 continue
             
-            # 检查是否有覆盖的空洞
+            # Check for covering hole
             start = max(part.offset, other.offset)
             end = min(part.offset + part.size, other.offset + other.size)
             
             if self._image_has_hole_covering(image, other.image, start - other.offset, end - other.offset):
                 continue
             
-            # 发现重叠
+            # Overlap found
             raise ImageError(
-                f"分区 {part.name} (偏移 0x{part.offset:x}, 大小 0x{part.size:x}) "
-                f"与之前的分区 {other.name} (偏移 0x{other.offset:x}, 大小 0x{other.size:x}) 重叠"
+                f"Partition {part.name} (offset 0x{part.offset:x}, size 0x{part.size:x}) "
+                f"overlaps with previous partition {other.name} (offset 0x{other.offset:x}, size 0x{other.size:x})"
             )
         return False
     
     def _image_has_hole_covering(self, image: Image, child_name: str, start: int, end: int) -> bool:
-        """检查子镜像是否有覆盖指定范围的空洞"""
+        """Check if the sub-image has a hole covering the specified range"""
         if not child_name:
             return False
             
@@ -755,21 +755,21 @@ class HdImageHandler(ImageHandler):
         return False
     
     def _get_child_image_size(self, image: Image, child_name: str) -> int:
-        """获取子镜像大小"""
+        """Get the size of the sub-image"""
         for dep in image.partitions:
             if dep.name == child_name:
                 return dep.size
         return 0
     
     def _write_partition_data(self, image: Image, part: Partition) -> None:
-        """写入分区数据"""
+        """Write partition data"""
         if not part.image:
             return
                 
         child_size = 0
         image_path = ''
 
-        # 查找子镜像
+        # Find sub-image
         for dep in image.dependencies:
             if dep.get('image') == part.image:
                 image_path = dep.get('image_path')
@@ -779,18 +779,18 @@ class HdImageHandler(ImageHandler):
         if os.path.exists(image_path):
             child_size = os.path.getsize(image_path)
         else:
-            raise ImageError(f"找不到子镜像: {part.image}")
+            raise ImageError(f"Sub-image not found: {part.image}")
 
-        # 检查子镜像大小
+        # Check sub-image size
         if child_size > part.size:
-            raise ImageError(f"分区 {part.name} 大小({part.size})小于子镜像 {part.image} 大小({child_size})")
+            raise ImageError(f"Partition {part.name} size ({part.size}) is smaller than sub-image {part.image} size ({child_size})")
 
         insert_data(image, image_path, part.size , part.offset, bytes(0))
     
     def _lba_to_chs(self, lba: int, chs: List[int]) -> None:
-        """将LBA转换为CHS地址"""
-        hpc = 255  # 每柱面磁头数
-        spt = 63   # 每磁道扇区数
+        """Convert LBA to CHS address"""
+        hpc = 255  # Heads per cylinder
+        spt = 63   # Sectors per track
         s = lba % spt
         c = lba // spt
         h = c % hpc
@@ -801,14 +801,14 @@ class HdImageHandler(ImageHandler):
         chs[2] = c & 0xFF
     
     def _write_mbr(self, image: Image) -> None:
-        """写入MBR分区表"""
-        # 创建MBR结构
+        """Write MBR partition table"""
+        # Create MBR structure
         mbr_data = bytearray(72)
         
-        # 写入磁盘签名
+        # Write disk signature
         struct.pack_into('<I', mbr_data, 0, self.priv.disksig)
         
-        # 写入分区表项
+        # Write partition table entries
         entry_offset = 6
         i = 0
         
@@ -824,25 +824,25 @@ class HdImageHandler(ImageHandler):
             entry_offset += 16
             i += 1
         
-        # 处理混合分区表
+        # Handle hybrid partition table
         if self.priv.table_type == TYPE_HYBRID and i < 4:
             self._write_hybrid_mbr_entry(mbr_data, entry_offset)
         
-        # 写入引导签名
+        # Write boot signature
         mbr_data[70] = 0x55
         mbr_data[71] = 0xAA
         
-        # 写入MBR到镜像
+        # Write MBR to image
         print("write mbr")
         with open(image.outfile, 'r+b') as f:
             f.seek(440)
             f.write(mbr_data)
         
-        # 处理逻辑分区的EBR
+        # Handle EBRs for logical partitions
         self._write_ebrs(image)
     
     def _write_mbr_partition_entry(self, mbr_data: bytearray, offset: int, part: Partition) -> None:
-        """写入MBR分区表项"""
+        """Write MBR partition table entry"""
         entry = MbrPartitionEntry(
             boot=0x80 if part.bootable else 0x00,
             partition_type=part.partition_type,
@@ -850,11 +850,11 @@ class HdImageHandler(ImageHandler):
             total_sectors=int(part.size / 512)
         )
         
-        # 计算CHS地址
+        # Calculate CHS address
         self._lba_to_chs(entry.relative_sectors, entry.first_chs)
         self._lba_to_chs(entry.relative_sectors + entry.total_sectors - 1, entry.last_chs)
         
-        # 写入分区表项
+        # Write partition table entry
         mbr_data[offset] = entry.boot
         mbr_data[offset+1:offset+4] = bytes(entry.first_chs)
         mbr_data[offset+4] = parse_size(entry.partition_type)
@@ -863,7 +863,7 @@ class HdImageHandler(ImageHandler):
         struct.pack_into('<I', mbr_data, offset+12, entry.total_sectors)
     
     def _write_hybrid_mbr_entry(self, mbr_data: bytearray, offset: int) -> None:
-        """写入混合分区表的特殊项"""
+        """Write special entry for hybrid partition table"""
         entry = MbrPartitionEntry(
             partition_type=0xee,
             relative_sectors=1,
@@ -880,7 +880,7 @@ class HdImageHandler(ImageHandler):
         struct.pack_into('<I', mbr_data, offset+12, entry.total_sectors)
     
     def _write_ebrs(self, image: Image) -> None:
-        """写入扩展引导记录(EBR)"""
+        """Write Extended Boot Records (EBR)"""
         extended_part = self.priv.extended_partition
         if not extended_part:
             return
@@ -894,18 +894,18 @@ class HdImageHandler(ImageHandler):
             ebr_offset = part.offset - self.priv.align + 446
             ebr_data = bytearray(512)
             
-            # 第一个表项: 当前逻辑分区
+            # First entry: current logical partition
             self._write_ebr_current_entry(ebr_data, part, extended_part)
             
-            # 第二个表项: 下一个EBR
+            # Second entry: next EBR
             if prev_part is not None:
                 self._write_ebr_next_entry(ebr_data, part, extended_part)
             
-            # 写入引导签名
+            # Write boot signature
             ebr_data[510] = 0x55
             ebr_data[511] = 0xAA
             
-            # 写入EBR到镜像
+            # Write EBR to image
             with open(image.outfile, 'r+b') as f:
                 f.seek(ebr_offset)
                 f.write(ebr_data)
@@ -913,7 +913,7 @@ class HdImageHandler(ImageHandler):
             prev_part = part
     
     def _write_ebr_current_entry(self, ebr_data: bytearray, part: Partition, extended_part: Partition) -> None:
-        """写入EBR中的当前分区表项"""
+        """Write current partition entry in EBR"""
         entry1 = MbrPartitionEntry(
             partition_type=part.partition_type,
             relative_sectors=int(self.priv.align / 512),
@@ -930,7 +930,7 @@ class HdImageHandler(ImageHandler):
             entry1.last_chs
         )
         
-        # 写入第一个表项
+        # Write first entry
         ebr_data[0] = entry1.boot
         ebr_data[1:4] = bytes(entry1.first_chs)
         ebr_data[4] = entry1.partition_type
@@ -939,7 +939,7 @@ class HdImageHandler(ImageHandler):
         struct.pack_into('<I', ebr_data, 12, entry1.total_sectors)
     
     def _write_ebr_next_entry(self, ebr_data: bytearray, part: Partition, extended_part: Partition) -> None:
-        """写入EBR中的下一个分区表项"""
+        """Write next partition entry in EBR"""
         next_ebr_rel_sectors = int(
             (part.offset - self.priv.align - extended_part.offset) / 512
         )
@@ -955,7 +955,7 @@ class HdImageHandler(ImageHandler):
             entry2.last_chs
         )
         
-        # 写入第二个表项
+        # Write second entry
         ebr_data[16] = entry2.boot
         ebr_data[17:20] = bytes(entry2.first_chs)
         ebr_data[20] = entry2.partition_type
@@ -964,32 +964,32 @@ class HdImageHandler(ImageHandler):
         struct.pack_into('<I', ebr_data, 28, entry2.total_sectors)
     
     def _write_gpt(self, image: Image) -> None:
-        """写入GPT分区表"""
-        # 创建GPT头部
+        """Write GPT partition table"""
+        # Create GPT header
         header = GptHeader()
         header.disk_uuid = uuid.UUID(self.priv.disk_uuid).bytes
         header.backup_lba = (image.size // 512) - 1 if not self.priv.gpt_no_backup else 1
         header.last_usable_lba = (image.size // 512) - 1 - GPT_SECTORS
         header.starting_lba = self.priv.gpt_location // 512
         
-        # 收集分区信息
+        # Collect partition information
         gpt_entries, smallest_offset = self._collect_gpt_entries(image)
         
-        # 设置第一个可用LBA
+        # Set first usable LBA
         if smallest_offset is None:
             smallest_offset = self.priv.gpt_location + (GPT_SECTORS - 1) * 512
         header.first_usable_lba = smallest_offset // 512
         
-        # 构建分区表
+        # Build partition table
         table_data = self._build_gpt_table(gpt_entries)
         
-        # 计算分区表CRC
+        # Calculate partition table CRC
         header.table_crc = zlib.crc32(table_data) & 0xFFFFFFFF
         
-        # 计算头部CRC并写入
+        # Calculate header CRC and write
         header_bytes = self._build_gpt_header(header)
         
-        # 写入主GPT头部和分区表
+        # Write primary GPT header and partition table
         print("write gpt")
         with open(image.outfile, 'r+b') as f:
             f.seek(512)
@@ -997,18 +997,18 @@ class HdImageHandler(ImageHandler):
             f.seek(self.priv.gpt_location)
             f.write(table_data)
         
-        # 写入备份GPT
+        # Write backup GPT
         if not self.priv.gpt_no_backup:
             self._write_gpt_backup(image, header, table_data)
         
-        # 写入保护性MBR或混合MBR
+        # Write protective MBR or hybrid MBR
         if self.priv.table_type == TYPE_HYBRID:
             self._write_mbr(image)
         else:
             self._write_protective_mbr(image)
     
     def _collect_gpt_entries(self, image: Image) -> Tuple[List[GptPartitionEntry], Optional[int]]:
-        """收集GPT分区表项信息"""
+        """Collect GPT partition table entry information"""
         gpt_entries = []
         smallest_offset = None
         
@@ -1019,44 +1019,44 @@ class HdImageHandler(ImageHandler):
             entry = self._create_gpt_entry(part)
             gpt_entries.append(entry)
             
-            # 跟踪最小偏移
+            # Track smallest offset
             if smallest_offset is None or part.offset < smallest_offset:
                 smallest_offset = part.offset
                 
         return gpt_entries, smallest_offset
     
     def _create_gpt_entry(self, part: Partition) -> GptPartitionEntry:
-        """创建单个GPT分区表项"""
+        """Create a single GPT partition table entry"""
         entry = GptPartitionEntry()
         
-        # 设置分区类型UUID
+        # Set partition type UUID
         if part.partition_type_uuid:
             try:
                 entry.type_uuid = uuid.UUID(part.partition_type_uuid).bytes
             except ValueError:
-                # 尝试查找类型别名
+                # Try to find type alias
                 type_uuid = self._get_gpt_partition_type(part.partition_type_uuid)
                 if type_uuid:
                     entry.type_uuid = uuid.UUID(type_uuid).bytes
                 else:
-                    raise ImageError(f"分区 {part.name} 有无效的类型: {part.partition_type_uuid}")
+                    raise ImageError(f"Partition {part.name} has invalid type: {part.partition_type_uuid}")
         else:
             entry.type_uuid = self._get_gpt_partition_type('L').bytes
         
-        # 设置分区UUID
+        # Set partition UUID
         if part.partition_uuid:
             try:
                 entry.uuid = uuid.UUID(part.partition_uuid).bytes
             except ValueError:
-                raise ImageError(f"分区 {part.name} 有无效的UUID: {part.partition_uuid}")
+                raise ImageError(f"Partition {part.name} has invalid UUID: {part.partition_uuid}")
         else:
             entry.uuid = uuid.uuid4().bytes
         
-        # 设置LBA范围
+        # Set LBA range
         entry.first_lba = part.offset // 512
         entry.last_lba = (part.offset + part.size) // 512 - 1
         
-        # 设置标志
+        # Set flags
         flags = 0
         if part.bootable:
             flags |= GPT_PE_FLAG_BOOTABLE
@@ -1068,14 +1068,14 @@ class HdImageHandler(ImageHandler):
             flags |= GPT_PE_FLAG_NO_AUTO
         entry.flags = flags
         
-        # 设置名称
+        # Set name
         for i, c in enumerate(part.name[:36]):
             entry.name[i] = ord(c)
             
         return entry
     
     def _build_gpt_table(self, gpt_entries: List[GptPartitionEntry]) -> bytearray:
-        """构建GPT分区表数据"""
+        """Build GPT partition table data"""
         table_data = bytearray(GPT_ENTRIES * 128)
         for i, entry in enumerate(gpt_entries[:GPT_ENTRIES]):
             offset = i * 128
@@ -1106,30 +1106,30 @@ class HdImageHandler(ImageHandler):
         struct.pack_into('<I', header_bytes, 84, header.entry_size)
         struct.pack_into('<I', header_bytes, 88, header.table_crc)
         
-        # 重新计算头部CRC
+        # Recalculate header CRC
         header.header_crc = zlib.crc32(header_bytes) & 0xFFFFFFFF
         struct.pack_into('<I', header_bytes, 16, header.header_crc)
         
         return header_bytes
 
     def _write_gpt_backup(self, image: Image, header: GptHeader, table_data: bytearray) -> None:
-        """写入GPT备份分区表"""
-        # 备份头部
+        """Write GPT backup partition table"""
+        # Backup header
         backup_header = self._build_gpt_header(header)
         
-        # 更新备份头部的LBA信息
+        # Update LBA information in backup header
         backup_current_lba = header.backup_lba
         backup_backup_lba = 1
         struct.pack_into('<Q', backup_header, 24, backup_current_lba)
         struct.pack_into('<Q', backup_header, 32, backup_backup_lba)
         struct.pack_into('<Q', backup_header, 72, image.size//512 - GPT_SECTORS)
         
-        # 重新计算备份头部CRC
-        struct.pack_into('<I', backup_header, 16, 0)  # 清零旧CRC
+        # Recalculate backup header CRC
+        struct.pack_into('<I', backup_header, 16, 0)  # Zero out old CRC
         backup_header_crc = zlib.crc32(backup_header) & 0xFFFFFFFF
         struct.pack_into('<I', backup_header, 16, backup_header_crc)
         
-        # 写入备份分区表和头部
+        # Write backup partition table and header
         with open(image.outfile, 'r+b') as f:
             f.seek(image.size - GPT_SECTORS * 512)
             f.write(table_data)
@@ -1137,24 +1137,24 @@ class HdImageHandler(ImageHandler):
             f.write(backup_header)
     
     def _get_gpt_partition_type(self, shortcut: str) -> Optional[str]:
-        """查找GPT分区类型UUID"""
+        """Look up GPT partition type UUID"""
         return GPT_PARTITION_TYPES.get(shortcut.upper())
     
     def _setup_toc_partitions(self, image: Image) -> None:
-        """设置TOC分区"""
+        """Setup TOC partition"""
         if not self.priv.toc_enable:
             return
 
         toc_entries = []
         index_count = 0
 
-        # 为每个分区创建TOC条目
+        # Create TOC entry for each partition
         for part in image.partitions:
-            if part.name.startswith('['):  # 跳过内部分区
+            if part.name.startswith('['):  # Skip internal partitions
                 continue
 
             toc_entry = TocInsertData()
-            toc_entry.partition_name = part.name[:31]  # 限制名称长度
+            toc_entry.partition_name = part.name[:31]  # Limit name length
             toc_entry.load = 1 if part.load else 0
             toc_entry.boot = part.boot
             toc_entry.partition_offset = part.offset if part.offset else 0
@@ -1166,8 +1166,8 @@ class HdImageHandler(ImageHandler):
         if index_count > 0:
             self.priv.toc_num = index_count
             
-            # 创建TOC分区
-            toc_size = 64 * index_count  # 每个TOC条目64字节
+            # Create TOC partition
+            toc_size = 64 * index_count  # 64 bytes per TOC entry
             toc_partition = Partition(
                 name="[TOC]",
                 parent_image=image.name,
@@ -1179,7 +1179,7 @@ class HdImageHandler(ImageHandler):
             
             print(f"TOC Partition: {toc_partition.name} (offset 0x{toc_partition.offset:x}, size 0x{toc_partition.size:x})")
             
-            # 存储TOC数据供后续写入
+            # Store TOC data for later writing
             image.handler_config['toc_entries'] = toc_entries
 
     @staticmethod
@@ -1187,12 +1187,12 @@ class HdImageHandler(ImageHandler):
         if isinstance(value, str):
             value = value.strip().lower()
             if value.startswith('0x'):
-                return int(value, 16) # 转换为十六进制
-            return int(value, 10) # 转换为十进制
+                return int(value, 16) # Convert to hexadecimal
+            return int(value, 10) # Convert to decimal
         return int(value) if value is not None else 0
 
     def _write_toc(self, image: Image) -> None:
-        """写入TOC数据"""
+        """Write TOC data"""
         if not self.priv.toc_enable or not self.priv.toc_num:
             return
             
@@ -1202,39 +1202,39 @@ class HdImageHandler(ImageHandler):
 
         print("writing TOC")
         
-        # 构建TOC数据
+        # Build TOC data
         toc_data = bytearray(self.priv.toc_num * 64)
 
         for i, toc_entry in enumerate(toc_entries):
             offset = i * 64
 
-            # 写入分区名称 (32字节)
+            # Write partition name (32 bytes)
             name_bytes = toc_entry.partition_name.encode('utf-8')[:31]
             toc_data[offset:offset+32] = name_bytes.ljust(32, b'\x00')
 
-            # 写入分区偏移 (8字节，小端)
-            # 确保 partition_offset 是整数
+            # Write partition offset (8 bytes, little-endian)
+            # Ensure partition_offset is an integer
             offset_val = self._safe_to_int(toc_entry.partition_offset)
             struct.pack_into('<Q', toc_data, offset + 32, offset_val)
 
-            # 写入分区大小 (8字节，小端)
-            # 确保 partition_size 是整数
+            # Write partition size (8 bytes, little-endian)
+            # Ensure partition_size is an integer
             size_val = self._safe_to_int(toc_entry.partition_size)
             struct.pack_into('<Q', toc_data, offset + 40, size_val)
 
-            # 写入标志 (2字节)
-            # 确保 load 和 boot 都是整数，load 字段在 _setup_toc_partitions 中已被清理，但为安全起见也使用 safe_to_int
+            # Write flags (2 bytes)
+            # Ensure load and boot are integers. The load field was cleaned up in _setup_toc_partitions, but use safe_to_int for safety
             load_val = self._safe_to_int(toc_entry.load)
-            boot_val = self._safe_to_int(toc_entry.boot) # <--- CRITICAL FIX: 转换 boot 字段
+            boot_val = self._safe_to_int(toc_entry.boot) # <--- CRITICAL FIX: Convert boot field
 
-            # bytearray 赋值需要整数 (0-255)
+            # bytearray assignment requires integers (0-255)
             toc_data[offset + 48] = load_val
             toc_data[offset + 49] = boot_val 
 
-            # 填充剩余14字节
+            # Fill remaining 14 bytes
             toc_data[offset + 50:offset + 64] = b'\x00' * 14
 
-        # 写入TOC到镜像
+        # Write TOC to image
         toc_offset = self.priv.toc_offset if self.priv.toc_offset else 0
         with open(image.outfile, 'r+b') as f:
             f.seek(toc_offset)
@@ -1243,13 +1243,13 @@ class HdImageHandler(ImageHandler):
         print(f"TOC written at offset 0x{toc_offset:x}, size {len(toc_data)} bytes")
 
     def _write_protective_mbr(self, image: Image) -> None:
-        """写入保护性MBR"""
+        """Write Protective MBR"""
         mbr_data = bytearray(72)
         
-        # 写入磁盘签名
+        # Write disk signature
         struct.pack_into('<I', mbr_data, 0 , self.priv.disksig)
         
-        # 保护性分区表项
+        # Protective partition table entry
         entry_offset = 6
         entry = MbrPartitionEntry(
             partition_type=0xee,
@@ -1266,7 +1266,7 @@ class HdImageHandler(ImageHandler):
         struct.pack_into('<I', mbr_data, entry_offset+8, entry.relative_sectors)
         struct.pack_into('<I', mbr_data, entry_offset+12, entry.total_sectors)
         
-        # 引导签名
+        # Boot signature
         mbr_data[70] = 0x55
         mbr_data[71] = 0xAA
         

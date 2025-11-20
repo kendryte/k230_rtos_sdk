@@ -5,7 +5,7 @@ from typing import Dict, List, Optional
 from .common import ImageHandler, Image, ImageError, run_command, prepare_image, mountpath, parse_size, get_tool_path
 
 class UffsHandler(ImageHandler):
-    """UFFS 文件系统处理器"""
+    """UFFS filesystem handler"""
     type = "uffs"
     opts = ["extraargs", "size"]
 
@@ -17,15 +17,15 @@ class UffsHandler(ImageHandler):
     def setup(self, image: Image, config: Dict[str, str]) -> None:
         self.config = config
         
-        # 检查 flash 类型配置
+        # Check flash type configuration
         if not hasattr(image, 'flash_type') or not image.flash_type:
-            raise ImageError("未指定 flash 类型")
+            raise ImageError("Flash type not specified")
         
         flash_type = image.flash_type
         if not getattr(flash_type, 'is_uffs', False):
-            raise ImageError("指定的 flash 类型不是 uffs")
+            raise ImageError("Specified flash type is not uffs")
         
-        # 检查必要的 flash 参数
+        # Check required flash parameters
         required_params = [
             'page_size', 
             'block_pages', 
@@ -33,15 +33,15 @@ class UffsHandler(ImageHandler):
         ]
         for param in required_params:
             if not hasattr(flash_type, param) or getattr(flash_type, param) == 0:
-                raise ImageError(f"flash 类型中 {param} 配置无效")
+                raise ImageError(f"Invalid {param} configuration in flash type")
         
-        # 检查 ECC 选项有效性
+        # Check ECC option validity
         if hasattr(flash_type, 'ecc_option') and flash_type.ecc_option > 3:
-            raise ImageError("无效的 uffs flash ecc 选项")
+            raise ImageError("Invalid uffs flash ecc option")
 
     def parse(self, image: Image, config: Dict[str, str]) -> None:
-        """解析配置中的文件和分区信息"""
-        # 处理 files 列表
+        """Parse files and partition information in configuration"""
+        # Process files list
         files = config.get("files", [])
         if isinstance(files, str):
             files = [files]
@@ -49,7 +49,7 @@ class UffsHandler(ImageHandler):
         for file_path in files:
             image.partitions.append(Partition(name="", parent_image=image.name, image=file_path))
 
-        # 处理分段配置
+        # Process segmented configuration
         file_sections = config.get("content", [])
         if not isinstance(file_sections, list):
             file_sections = [file_sections]
@@ -62,36 +62,36 @@ class UffsHandler(ImageHandler):
                     image.partitions.append(Partition(name=name, parent_image=image.name, image=img))
 
     def generate(self, image: Image) -> None:
-        # 准备镜像文件
+        # Prepare image file
         prepare_image(image)
 
-        # 获取配置参数
+        # Get configuration parameters
         extraargs = self.config.get("extraargs", "")
         size_str = self.config.get("size", "")
         part_size = parse_size(size_str)
 
-        # 验证镜像大小对齐
+        # Verify image size alignment
         flash_type = image.flash_type
         block_size = flash_type.page_size * flash_type.block_pages
         if part_size % block_size != 0:
             raise ImageError(
-                f"镜像大小 ({part_size}) 无效，必须对齐到 {block_size} 字节"
+                f"Invalid image size ({part_size}), must be aligned to {block_size} bytes"
             )
 
-        # 计算总块数
+        # Calculate total blocks
         total_blocks = part_size // block_size
 
-        # 构建 ECC 选项参数
+        # Build ECC option parameters
         ecc_opt = ["none", "soft", "hw", "auto"]
-        ecc_option = flash_type.ecc_option if hasattr(flash_type, 'ecc_option') else 3  # 默认 auto
+        ecc_option = flash_type.ecc_option if hasattr(flash_type, 'ecc_option') else 3  # default auto
         if ecc_option < 0 or ecc_option >= len(ecc_opt):
-            raise ImageError(f"无效的 ECC 选项: {ecc_option}")
+            raise ImageError(f"Invalid ECC option: {ecc_option}")
 
-        # 删除已存在的输出文件
+        # Delete existing output file
         if os.path.exists(image.outfile):
             os.remove(image.outfile)
 
-        # 构建 mkuffs 命令
+        # Build mkuffs command
         cmd = [
             get_tool_path("mkuffs"),
             "-f", image.outfile,
@@ -104,22 +104,22 @@ class UffsHandler(ImageHandler):
             "-d", mountpath(image),
             *extraargs.split()
         ]
-        # 过滤空参数
+        # Filter empty parameters
         cmd = [arg for arg in cmd if arg]
 
-        # 执行命令
+        # Execute command
         run_command(cmd)
 
-        # 更新镜像大小
+        # Update image size
         try:
             stat_info = os.stat(image.outfile)
             image.size = stat_info.st_size
         except OSError as e:
-            raise ImageError(f"无法获取镜像文件信息: {str(e)}")
+            raise ImageError(f"Unable to get image file information: {str(e)}")
 
 
     def _get_child_image(self, parent_image: Image, name: str) -> Optional[Image]:
-        """获取子镜像对象"""
+        """Get child image object"""
         for dep in parent_image.dependencies:
             if dep.name == name:
                 return dep

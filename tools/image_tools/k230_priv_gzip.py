@@ -14,6 +14,7 @@ import subprocess
 import argparse
 import logging
 import platform
+import shutil
 from pathlib import Path
 from typing import List, Optional, Union, Dict, Any
 from enum import Enum
@@ -57,58 +58,53 @@ class K230PrivGzip:
 
     def _find_executable(self, provided_path: Optional[str] = None) -> str:
         """
-        Find the k230_priv_gzip executable on the system.
+        Find the k230_priv_gzip executable on the system, handling Windows naming conventions.
         
         Args:
             provided_path: Explicit path to the executable
             
         Returns:
-            Path to the executable
+            Absolute path to the executable
             
         Raises:
             K230PrivGzipError: If executable cannot be found
         """
+        executable_name = "k230_priv_gzip"
+        
+        # 1. Check if an explicit path was provided
         if provided_path:
-            if os.path.isfile(provided_path) and os.access(provided_path, os.X_OK):
-                return provided_path
+            provided_path_obj = Path(provided_path)
+            if provided_path_obj.is_file() and os.access(provided_path_obj, os.X_OK):
+                return str(provided_path_obj.resolve())
             else:
                 raise K230PrivGzipError(f"Executable not found or not executable: {provided_path}")
-        
-        # Try to find executable in the same directory as this script
-        script_dir = Path(__file__).parent
-        local_executable = script_dir / "bin" / "k230_priv_gzip"
+
+        # Determine the correct executable name for the platform
+        if platform.system() == "Windows":
+            full_executable_name = f"{executable_name}.exe"
+        else:
+            full_executable_name = executable_name
+
+        # 2. Try to find executable in the same directory as this script (bin/subdir)
+        # This uses Path(__file__).resolve().parent to get the directory consistently.
+        script_dir = Path(__file__).resolve().parent
+        local_executable = script_dir / "bin" / full_executable_name
 
         if local_executable.exists() and os.access(local_executable, os.X_OK):
-            return str(local_executable)
+            return str(local_executable.resolve())
 
-        # Try to find in system PATH
-        try:
-            result = subprocess.run(['which', 'k230_priv_gzip'], 
-                                  capture_output=True, text=True, check=True)
-            if result.stdout.strip():
-                return result.stdout.strip()
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            pass
-        
-        # Windows-specific handling
-        if platform.system() == "Windows":
-            # Try with .exe extension
-            windows_executable = script_dir / "bin" / "k230_priv_gzip.exe"
-            if windows_executable.exists():
-                return str(windows_executable)
-            
-            # Try in PATH with .exe
-            try:
-                result = subprocess.run(['where', 'k230_priv_gzip.exe'], 
-                                      capture_output=True, text=True, check=True)
-                if result.stdout.strip():
-                    return result.stdout.strip().split('\n')[0]
-            except (subprocess.CalledProcessError, FileNotFoundError):
-                pass
+        # 3. Try to find in system PATH using shutil.which (platform-aware)
+        # shutil.which handles the differences between 'which' and 'where',
+        # and automatically checks for the '.exe' extension on Windows.
+        system_executable = shutil.which(executable_name)
 
+        if system_executable:
+            return system_executable
+
+        # 4. Final failure if not found
         raise K230PrivGzipError(
-            "k230_priv_gzip executable not found. Please ensure it is installed "
-            "and accessible, or provide the path explicitly."
+            f"'{full_executable_name}' executable not found. Please ensure it is installed "
+            "and accessible via PATH, or provide the path explicitly."
         )
     
     def _execute_command(self, args: List[str], input_data: Optional[bytes] = None,
@@ -240,7 +236,7 @@ class K230PrivGzip:
                 compression_successful = True
                 break # Exit the loop after successful compression
 
-            except CalledProcessError as e:
+            except subprocess.CalledProcessError as e:
                 logging.warning(f"Compression failed with level -n{level}. Trying next level. Error: {e.stderr.decode() if e.stderr else e}")
             except Exception as e:
                 raise K230PrivGzipError(f"An unexpected error occurred during compression: {e}")

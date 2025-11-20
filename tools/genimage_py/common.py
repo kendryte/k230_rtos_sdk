@@ -9,12 +9,12 @@ from typing import Optional
 from typing import List, Dict, Optional, Any, Callable
 
 class ImageError(Exception):
-    """镜像处理相关错误"""
+    """Image processing related errors"""
     pass
 
 @dataclass
 class TocInsertData:
-    """TOC插入数据结构"""
+    """TOC insert data structure"""
     partition_name: str = ""
     partition_offset: int = 0
     partition_size: int = 0
@@ -23,16 +23,16 @@ class TocInsertData:
 
 @dataclass
 class Partition:
-    """分区信息类"""
+    """Partition information class"""
     name: str
-    parent_image: str  # 所属镜像名称
+    parent_image: str  # Parent image name
     in_partition_table: bool = True
     offset: int = 0
     size: Optional[int] = None
-    image: Optional[str] = None  # 引用的镜像文件
-    partition_type: Optional[str] = None  # 分区类型
-    partition_type_uuid: Optional[str] = None  # GPT分区类型UUID
-    partition_uuid: Optional[str] = None  # 分区UUID
+    image: Optional[str] = None  # Referenced image file
+    partition_type: Optional[str] = None  # Partition type
+    partition_type_uuid: Optional[str] = None  # GPT partition type UUID
+    partition_uuid: Optional[str] = None  # Partition UUID
     bootable: bool = False
     read_only: bool = False
     hidden: bool = False
@@ -45,7 +45,7 @@ class Partition:
     flag: Optional[str] = None
     load: bool = False  # TOC load flag
     boot: int = 0  # TOC boot flag
-    # 其他可能的属性
+    # Other possible attributes
     extraargs: Optional[str] = None
 
 @dataclass
@@ -70,26 +70,26 @@ class Flash_type:
     
 @dataclass
 class Image:
-    """镜像文件信息类"""
+    """Image file information class"""
     name: str = None
     file: str = None
-    image_type: str = None  # 如hdimage, vfat, ext4等
+    image_type: str = None  # e.g., hdimage, vfat, ext4, etc.
     size: Optional[int] = None
-    size_str: Optional[str] = None  # 原始大小字符串（带单位）
-    temporary: bool = False  # 是否为临时文件
+    size_str: Optional[str] = None  # Original size string (with units)
+    temporary: bool = False  # Whether it's a temporary file
     mountpoint: Optional[str] = None
     mountpath: Optional[str] = None
     exec_pre: Optional[str] = None
     exec_post: Optional[str] = None
-    partitions: List[Partition] = None  # 分区列表
-    empty: bool = False  # 是否为空镜像
+    partitions: List[Partition] = None  # Partition list
+    empty: bool = False  # Whether it's an empty image
     outfile: str = ""
-    holes: List[int] = None  # 空洞列表
-    handler: Any = None  # 关联的处理器
-    handler_config: Dict[str, Any] = None  # 处理器配置
+    holes: List[int] = None  # Hole list
+    handler: Any = None  # Associated handler
+    handler_config: Dict[str, Any] = None  # Handler configuration
     done: bool = False
-    flash_type : Flash_type = None  # 镜像类型
-    dependencies: List[Any] = None  # 依赖的镜像列表
+    flash_type : Flash_type = None  # Image type
+    dependencies: List[Any] = None  # Dependency image list
     
     def __post_init__(self):
         if self.partitions is None:
@@ -100,21 +100,21 @@ class Image:
             self.handler_config = {}
 
 class ImageHandler:
-    """镜像处理器基类"""
+    """Image handler base class"""
     type: str = ""
     opts: List[str] = []
     
     def generate(self, image: Image):
-        """生成镜像文件"""
+        """Generate image file"""
         pass
     
     def setup(self, image: Image, config: Dict[str, Any]):
-        """设置镜像参数"""
+        """Set up image parameters"""
         pass
 
     def run(self,image: Image, config: Dict[str, str]):
-        """执行镜像处理"""
-        raise NotImplementedError("子类必须实现run方法")
+        """Execute image processing"""
+        raise NotImplementedError("Subclass must implement run method")
 
 def insert_data(image: Image, image_path: str, size: int, offset: int, padding_byte: bytes) -> None:
     try:
@@ -123,10 +123,10 @@ def insert_data(image: Image, image_path: str, size: int, offset: int, padding_b
 
         with open(image.outfile, 'r+b') as f_out:
             f_out.seek(offset)
-            file_size = os.path.getsize(image_path)  # 获取源文件大小
+            file_size = os.path.getsize(image_path)  # Get source file size
             print(f"insert data: {image_path} to {image.outfile} at {offset} size {file_size}")
             with open(image_path, 'rb') as f_in:
-                chunk_size = 4 * 1024 * 1024  # 4MB块
+                chunk_size = 4 * 1024 * 1024  # 4MB chunk
                 remaining = file_size
                 while remaining > 0:
                     chunk = f_in.read(min(chunk_size, remaining))
@@ -139,11 +139,11 @@ def insert_data(image: Image, image_path: str, size: int, offset: int, padding_b
                 f_out.write(padding_byte * pad_size)
                 print(f"write padding: {pad_size} bytes")
     except IOError as e:
-        raise ImageError(f"写入文件失败: {str(e)}")
+        raise ImageError(f"Failed to write file: {str(e)}")
 
 
 def mountpath(image: Image) -> str:
-    """获取镜像的挂载点"""
+    """Get mount point of image"""
     if image.mountpath:
         return image.mountpath
     elif image.mountpoint:
@@ -153,7 +153,7 @@ def mountpath(image: Image) -> str:
 
 
 def run_command(cmd: List[str], env: Optional[Dict[str, str]] = None) -> int:
-    """运行外部命令并返回结果"""
+    """Run external command and return result"""
     try:
         print(f"run: {' '.join(cmd)}")
         result = subprocess.run(
@@ -165,11 +165,11 @@ def run_command(cmd: List[str], env: Optional[Dict[str, str]] = None) -> int:
         )
         return 0
     except subprocess.CalledProcessError as e:
-        print(f"命令执行失败: {e.output}", file=sys.stderr)
+        print(f"Command execution failed: {e.output}", file=sys.stderr)
         return e.returncode
 
 def parse_size(size_str: str) -> int:
-    """解析带单位的大小字符串"""
+    """Parse size string with units"""
     if not size_str:
         return 0
         
@@ -181,15 +181,15 @@ def parse_size(size_str: str) -> int:
         't': 1024 * 1024 * 1024 * 1024
     }
     
-    # 处理十六进制
+    # Handle hexadecimal
     if size_str.startswith('0x'):
         try:
             num = int(size_str, 16)
             return num
         except ValueError:
-            raise ImageError(f"无效的十六进制大小格式: {size_str}")
+            raise ImageError(f"Invalid hexadecimal size format: {size_str}")
     
-    # 提取数字和单位
+    # Extract number and unit
     num_str = ''
     suffix = ''
     for c in size_str:
@@ -200,72 +200,72 @@ def parse_size(size_str: str) -> int:
             break
     
     if not num_str:
-        raise ImageError(f"无效的大小格式: {size_str}")
+        raise ImageError(f"Invalid size format: {size_str}")
     
     try:
         num = float(num_str)
     except ValueError:
-        raise ImageError(f"无效的大小格式: {size_str}")
+        raise ImageError(f"Invalid size format: {size_str}")
     
-    # 应用单位
+    # Apply unit
     if suffix in suffixes:
         return int(num * suffixes[suffix])
     else:
-        # 没有单位，默认字节
+        # No unit, default to bytes
         return int(num)
 
 def get_tool_path(tool_name: str, bin_dir: Optional[str] = None) -> str:
     """
-    获取工具路径，优先从指定的bin目录查找，然后从系统PATH查找。
-    增加了对不同操作系统的支持，特别是 Windows 下的可执行文件扩展名。
+    Get tool path, prioritize from specified bin directory, then from system PATH.
+    Added support for different operating systems, especially executable file extensions on Windows.
 
     Args:
-        tool_name: 工具名称。
-        bin_dir: 本地工具目录，默认为当前脚本所在目录的 'bin' 子目录。
+        tool_name: Tool name.
+        bin_dir: Local tool directory, defaults to 'bin' subdirectory of current script directory.
 
     Returns:
-        找到的工具的绝对路径，如果找不到，则返回工具名称本身。
+        Absolute path of found tool, or tool name itself if not found.
     """
-    # 1. 确定本地 bin 目录
+    # 1. Determine local bin directory
     if bin_dir is None:
-        # 获取当前脚本所在目录的bin子目录
-        # 注意：os.path.abspath(__file__) 仅在作为文件运行时有效
+        # Get bin subdirectory of current script directory
+        # Note: os.path.abspath(__file__) only works when running as a file
         try:
             current_dir = os.path.dirname(os.path.abspath(__file__))
         except NameError:
-            # 兼容交互式环境或非主脚本调用
+            # Compatible with interactive environment or non-main script calls
             current_dir = os.getcwd()
 
         bin_dir = os.path.join(current_dir, 'bin')
 
-    # 定义在不同操作系统上可能的可执行文件扩展名
+    # Define possible executable file extensions on different operating systems
     if os.name == 'nt':
-        # Windows 系统：检查常见扩展名
+        # Windows system: check common extensions
         executable_suffixes = ['', '.exe', '.cmd', '.bat']
     else:
-        # POSIX 系统 (Linux, macOS, etc.)：通常没有扩展名
+        # POSIX systems (Linux, macOS, etc.): usually no extensions
         executable_suffixes = ['']
 
-    # 2. 首先检查bin目录
+    # 2. First check bin directory
     for suffix in executable_suffixes:
         bin_tool = os.path.join(bin_dir, tool_name + suffix)
 
-        # 检查文件是否存在且可执行
+        # Check if file exists and is executable
         if os.path.exists(bin_tool) and os.access(bin_tool, os.X_OK):
             return bin_tool
 
-    # 3. 如果bin目录没有，检查系统PATH
-    # 使用 shutil.which 替代手动遍历 PATH，它能自动处理 OS 相关的逻辑
+    # 3. If not in bin directory, check system PATH
+    # Use shutil.which instead of manually traversing PATH, it handles OS-related logic automatically
     system_tool = shutil.which(tool_name)
     if system_tool:
-        # shutil.which 返回的是绝对路径
+        # shutil.which returns absolute path
         return system_tool
 
-    # 4. 如果都找不到，返回工具名称（让系统在运行时处理）
+    # 4. If not found anywhere, return tool name (let system handle at runtime)
     return tool_name
 
 def prepare_image(image: Image, size = 0) -> int:
-    """准备镜像文件（创建指定大小的空文件）"""
+    """Prepare image file (create empty file of specified size)"""
     try:
         # path creat
         if not os.path.exists(os.path.dirname(image.outfile)):
@@ -274,9 +274,9 @@ def prepare_image(image: Image, size = 0) -> int:
             if not size:
                 size = image.size
             if size:
-                print(f"准备镜像文件 {image.outfile} 大小 {size} 字节")
+                print(f"Preparing image file {image.outfile} size {size} bytes")
                 f.seek(size - 1)
                 f.write(b'\x00')
         return 0
     except IOError as e:
-        raise ImageError(f"无法创建镜像文件 {image.outfile}: {str(e)}")
+        raise ImageError(f"Unable to create image file {image.outfile}: {str(e)}")
