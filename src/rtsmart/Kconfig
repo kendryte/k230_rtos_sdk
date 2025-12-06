@@ -36,9 +36,9 @@ menu "RT-Smart Configuration"
 
     config RTSMART_LWP_APP_STACK_SIZE
         hex "Rtsmart LWP app stack size"
-        default 0x10000
+        default 0x20000
         help
-            The stack size for LWP application, default is 0x10000 bytes.
+            The stack size for LWP application, default is 0x20000 bytes.
 
     config RTT_AUTO_EXEC_CMD
         string "Rtsmart auto execute command string"
