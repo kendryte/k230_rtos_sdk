@@ -13,15 +13,6 @@ class ImageError(Exception):
     pass
 
 @dataclass
-class TocInsertData:
-    """TOC insert data structure"""
-    partition_name: str = ""
-    partition_offset: int = 0
-    partition_size: int = 0
-    load: bool = False
-    boot: bool = False
-
-@dataclass
 class Partition:
     """Partition information class"""
     name: str
@@ -67,7 +58,7 @@ class Flash_type:
     ecc_option: int = 0
     ecc_size: int = 0
 
-    
+
 @dataclass
 class Image:
     """Image file information class"""
@@ -90,7 +81,7 @@ class Image:
     done: bool = False
     flash_type : Flash_type = None  # Image type
     dependencies: List[Any] = None  # Dependency image list
-    
+
     def __post_init__(self):
         if self.partitions is None:
             self.partitions = []
@@ -103,11 +94,11 @@ class ImageHandler:
     """Image handler base class"""
     type: str = ""
     opts: List[str] = []
-    
+
     def generate(self, image: Image):
         """Generate image file"""
         pass
-    
+
     def setup(self, image: Image, config: Dict[str, Any]):
         """Set up image parameters"""
         pass
@@ -134,7 +125,7 @@ def insert_data(image: Image, image_path: str, size: int, offset: int, padding_b
                         break
                     f_out.write(chunk)
                     remaining -= len(chunk)
-            
+
             if (pad_size := size - file_size) > 0:
                 f_out.write(padding_byte * pad_size)
                 print(f"write padding: {pad_size} bytes")
@@ -172,7 +163,7 @@ def parse_size(size_str: str) -> int:
     """Parse size string with units"""
     if not size_str:
         return 0
-        
+
     size_str = size_str.strip().lower()
     suffixes = {
         'k': 1024,
@@ -180,7 +171,7 @@ def parse_size(size_str: str) -> int:
         'g': 1024 * 1024 * 1024,
         't': 1024 * 1024 * 1024 * 1024
     }
-    
+
     # Handle hexadecimal
     if size_str.startswith('0x'):
         try:
@@ -188,7 +179,7 @@ def parse_size(size_str: str) -> int:
             return num
         except ValueError:
             raise ImageError(f"Invalid hexadecimal size format: {size_str}")
-    
+
     # Extract number and unit
     num_str = ''
     suffix = ''
@@ -198,21 +189,29 @@ def parse_size(size_str: str) -> int:
         else:
             suffix = c
             break
-    
+
     if not num_str:
         raise ImageError(f"Invalid size format: {size_str}")
-    
+
     try:
         num = float(num_str)
     except ValueError:
         raise ImageError(f"Invalid size format: {size_str}")
-    
+
     # Apply unit
     if suffix in suffixes:
         return int(num * suffixes[suffix])
     else:
         # No unit, default to bytes
         return int(num)
+
+def safe_to_int(value):
+    if isinstance(value, str):
+        value = value.strip().lower()
+        if value.startswith('0x'):
+            return int(value, 16) # 转换为十六进制
+        return int(value, 10) # 转换为十进制
+    return int(value) if value is not None else 0
 
 def get_tool_path(tool_name: str, bin_dir: Optional[str] = None) -> str:
     """
