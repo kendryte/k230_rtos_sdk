@@ -75,8 +75,12 @@ def main():
 
     bin_preload = Path(sdk_build_images_dir) / "bin" / "preload"
 
-    bin_preload.parent.mkdir(parents=True, exist_ok=True)
-    bin_preload.touch(exist_ok=True)
+    if not use_fake_rt_app:
+        bin_preload.parent.mkdir(parents=True, exist_ok=True)
+        bin_preload.touch(exist_ok=True)
+    else:
+        if bin_preload.exists():
+            os.remove(bin_preload)
 
     print(f"Generate RTApp Done.")
 
