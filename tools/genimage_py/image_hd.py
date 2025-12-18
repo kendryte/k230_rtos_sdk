@@ -367,7 +367,17 @@ class HdImageHandler(ComImageHandler):
         """Write partition data"""
         for part in image.partitions:
             if not part.image:
-                return
+                # 允许的无镜像分区：
+                #  - ota_meta：纯占位，由运行时 OTA/boot 写入
+                #  - 内部伪分区：[MBR] / [GPT header] / [GPT array] / [GPT backup] / [TOC] / [Extended] 等
+                if part.name == "ota_meta" or (part.name.startswith('[') and part.name.endswith(']')):
+                    continue
+
+                # 其他任意分区未指定 image，都视为配置错误，直接报错
+                raise ImageError(
+                    f"Partition {part.name} has no image file; only 'ota_meta' "
+                    f"and internal metadata partitions like [MBR]/[TOC] may omit image"
+                )
 
             child_size = 0
             image_path = ''

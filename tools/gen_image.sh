@@ -61,6 +61,45 @@ gen_image()
     echo "Generated image done, at ${SDK_BUILD_DIR}/${image}.${extension}"
 }
 
+gen_ota_image()
+{
+    local config="$1";
+    local image="$2";
+
+    # 如果没有对应的 kdimage 配置文件，则直接返回
+    if [ ! -f "${config}" ]; then
+        return
+    fi
+
+    echo "Generate kdimage by config ${config}"
+
+    # 清理上一次生成的 *.kdimg，避免被 find 误选
+    rm -f ${SDK_BUILD_DIR}/*.kdimg 2>/dev/null || true
+
+    python3 ${SDK_TOOLS_DIR}/genimage.py --rootpath "${SDK_BUILD_IMAGES_DIR}" --outputpath "${SDK_BUILD_DIR}" --config "${config}"
+
+    # 只寻找 kdimg（文件名由 cfg 中的 image 名决定，这里不依赖固定前缀）
+    generated_image=$(find ${SDK_BUILD_DIR} -maxdepth 1 -type f -name "*.kdimg" | head -n 1)
+
+    if [ -z "$generated_image" ]; then
+        echo "Error: No kdimg image file found for config ${config}!"
+        return
+    fi
+
+    generated_image_name=$(basename "$generated_image")
+
+    #cp $generated_image ${SDK_BUILD_IMAGES_DIR}/sdcard/
+    mv "$generated_image" "${SDK_BUILD_DIR}/${image}.kdimg"
+
+    echo "Compress kdimage ${image}.kdimg.gz, it will take a while"
+
+    gzip -k -f "${SDK_BUILD_DIR}/${image}.kdimg"
+    chmod a+rw "${SDK_BUILD_DIR}/${image}.kdimg" "${SDK_BUILD_DIR}/${image}.kdimg.gz"
+    md5sum "${SDK_BUILD_DIR}/${image}.kdimg" "${SDK_BUILD_DIR}/${image}.kdimg.gz" > "${SDK_BUILD_DIR}/${image}.kdimg.gz.md5"
+
+    echo "Generated kdimage done, at ${SDK_BUILD_DIR}/${image}.kdimg"
+}
+
 parse_repo_version()
 {
     pushd "${SDK_CANMV_SRC_DIR}" > /dev/null
@@ -144,4 +183,5 @@ else
     fi
 fi
 
+gen_ota_image "${SDK_BOARD_DIR}/genimage-sdcard-ota.cfg" "${image_name}_ota"
 gen_image ${SDK_BOARD_DIR}/${CONFIG_BOARD_GEN_IMAGE_CFG_FILE} $image_name;

@@ -252,6 +252,18 @@ class GenImageTool:
 
         # Process dependent images
         for dep in image.partitions:
+            # 只有 ota_meta 或内部伪分区([MBR]/[TOC] 等)可以不绑定子镜像；
+            # 其他分区如果未指定 image，则认为配置错误，直接报错。
+            if not dep.image:
+                # internal helper partitions created by code: [MBR], [GPT header], [TOC], [Extended], etc.
+                if dep.name == "ota_meta" or (dep.name.startswith('[') and dep.name.endswith(']')):
+                    continue
+
+                raise ImageError(
+                    f"Partition {dep.name} in image {image.name} has no image file; "
+                    f"only 'ota_meta' is allowed to be empty"
+                )
+
             dep_image = self.get_image_by_name(dep.image)
             if dep_image and dep_image.outfile:
                 dep_path = dep_image.outfile
