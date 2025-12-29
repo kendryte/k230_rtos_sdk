@@ -9,7 +9,7 @@ menu "Board Configuration"
 
     choice BOARD
         bool "Board Type"
-        default BOARD_K230_CANMV_HIWONDER
+        default BOARD_K230_CANMV
 
         config BOARD_K230_CANMV
             bool "K230 CanMV, Onboard 512M"
