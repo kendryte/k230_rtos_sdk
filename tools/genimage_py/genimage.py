@@ -4,13 +4,17 @@ import sys
 import shutil
 import tempfile
 import importlib
+import logging
 from typing import List, Dict, Optional, Any, Tuple
 from pathlib import Path
 
 from .common import (
     ImageError, Flash_type, Image, Partition, ImageHandler,
-    run_command, parse_size
+    run_command, parse_size, setup_logging
 )
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 from .image_hd import HdImageHandler
 from .image_kd import KdImageHandler
@@ -41,7 +45,9 @@ class GenImageTool:
         self.tmppath: str = os.path.join(tempfile.gettempdir(), "genimage")
 
         self.imagepath: str = ""
-    
+        
+        setup_logging()
+
     def get_image_by_name(self, name: str) -> Optional[Image]:
         """Find image by name"""
         for image in self.images:
@@ -182,7 +188,7 @@ class GenImageTool:
 
         size = 0
         # Traverse image to find file
-        print(f"image_name: {image_name}")
+        logger.debug(f"image_name: {image_name}")
         for img in self.images:
             if img.file == image_name:
                 if img.size:
@@ -213,7 +219,7 @@ class GenImageTool:
         try:
             handler = HANDLERS[image_type]
         except Exception as e:
-            print(f"An error occurred {e}, maybe not support image type")
+            logger.error(f"An error occurred {e}, maybe not support image type")
             raise
 
         # Create image object
@@ -275,7 +281,7 @@ class GenImageTool:
                 'image_path': dep_path
             })
 
-        print(f"image: {image}")
+        logger.debug(f"image: {image}")
 
         self.images.append(image)
 
@@ -384,21 +390,21 @@ class GenImageTool:
 
             self._creat_work_dir()
 
-            print(f"parsing config file: {self.config_file}")
+            logger.info(f"Generate image with config file: {self.config_file}")
             self.parse_config()
             
             # Parse dependencies and sort
-            # print("Parsing image dependencies...")
+            # logger.debug("Parsing image dependencies...")
             # ordered_images = self.resolve_dependencies()
 
             # Generate all images
-            print("Start generating images...")
+            logger.info("Start generating images...")
             for image in self.images:
-                print(f"Generate image: {image.name} ({image.image_type})")
+                logger.info(f"Generate image: {image.name} ({image.image_type})")
 
                 # Execute pre-command
                 if image.exec_pre:
-                    print(f"Run pre command: {image.exec_pre}")
+                    logger.info(f"Run pre command: {image.exec_pre}")
                     run_command(image.exec_pre.split())
 
                 # Call handler to generate image
@@ -409,13 +415,13 @@ class GenImageTool:
 
                 # Execute post-command
                 if image.exec_post:
-                    print(f"Run post command: {image.exec_post}")
+                    logger.info(f"Run post command: {image.exec_post}")
                     run_command(image.exec_post.split())
-                print(f"Image {image.name} generated")
+                logger.info(f"Image {image.name} generated")
 
-            print("All images generated successfully")
+            logger.info("All images generated successfully")
         except ImageError as e:
-            print(f"error: {str(e)}", file=sys.stderr)
+            logger.error(f"error: {str(e)}")
         finally:
             # Clean up temporary files
             shutil.rmtree(self.tmppath, ignore_errors=True)

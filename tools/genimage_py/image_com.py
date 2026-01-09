@@ -1,3 +1,4 @@
+import logging
 import struct
 import subprocess
 import uuid
@@ -7,6 +8,9 @@ import zlib
 from dataclasses import dataclass
 from typing import List, Dict, Any, Optional, Tuple, Iterable
 from .common import ImageHandler, Image, Partition, ImageError, run_command, prepare_image, parse_size, insert_data, safe_to_int
+
+# Configure logger
+logger = logging.getLogger(__name__)
 from .lib.toc import *
 from .lib.gpt import *
 
@@ -70,7 +74,7 @@ class ComImageHandler(ImageHandler):
         if self.table_type == TYPE_HYBRID:
             hybrid_entries = sum(1 for p in image.partitions
                                 if p.in_partition_table and p.partition_type)
-            print(f"Hybrid partition table: {hybrid_entries} partitions")
+            logger.debug(f"Hybrid partition table: {hybrid_entries} partitions")
             if hybrid_entries == 0:
                 raise ImageError("Hybrid partition table must contain at least one partition with partition-type")
             if hybrid_entries > 3:
@@ -130,12 +134,12 @@ class ComImageHandler(ImageHandler):
             )
             self.toc = toc
             self.toc_num = self.toc.entries_num
-            print(f"TOC Partition: {partition_name} (offset 0x{toc_offset:x}, size 0x{toc_size:x})")
+            logger.debug(f"TOC Partition: {partition_name} (offset 0x{toc_offset:x}, size 0x{toc_size:x})")
 
     def write_toc(self, image: Image, write_offset = None) -> None:
         """write toc data"""
         if self.toc_enable and self.toc_num and self.toc:
-            print("writing TOC")
+            logger.debug("writing TOC")
 
             toc = self.toc
             # Build toc data
@@ -152,7 +156,7 @@ class ComImageHandler(ImageHandler):
                 f.seek(write_offset)
                 f.write(toc_data)
 
-            print(f"TOC written at offset 0x{write_offset:x}, size {len(toc_data)} bytes")
+            logger.debug(f"TOC written at offset 0x{write_offset:x}, size {len(toc_data)} bytes")
 
     def add_partition_table(self, image: Image, partition_name: str, offset: int, size: int, in_partition_table: bool) -> None:
         entry = Partition(
@@ -169,7 +173,7 @@ class ComImageHandler(ImageHandler):
         if not child_name:
             return False
 
-        print(f"check child image {child_name} {start} {end}")
+        logger.debug(f"check child image {child_name} {start} {end}")
         for dep in image.partitions:
             if dep.name == child_name:
                 for hole in dep.holes:
@@ -183,7 +187,7 @@ class ComImageHandler(ImageHandler):
             if part == other:
                 return False
 
-            print(f"check overlap {part.name} {other.name}")
+            # print(f"check overlap {part.name} {other.name}")
             # Check if they are completely non-overlapping
             if part.offset >= other.offset + other.size:
                 continue
@@ -354,7 +358,7 @@ class ComImageHandler(ImageHandler):
         mbr_data[71] = 0xAA
 
         # Write MBR to image
-        print("write mbr")
+        logger.debug("write mbr")
         try:
             with open(write_path, 'r+b') as f:
                 f.seek(440)

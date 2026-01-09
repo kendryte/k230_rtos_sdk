@@ -1,3 +1,4 @@
+import logging
 import struct
 import subprocess
 import uuid
@@ -7,6 +8,9 @@ import zlib
 from dataclasses import dataclass
 from typing import List, Dict, Any, Optional, Tuple, Iterable
 from .common import ImageHandler, Image, Partition, ImageError, run_command, prepare_image, parse_size, insert_data, safe_to_int
+
+# Configure logger
+logger = logging.getLogger(__name__)
 from .image_com import *
 
 from .lib.toc import *
@@ -82,10 +86,10 @@ class HdImageHandler(ComImageHandler):
         """Handle deprecated configuration parameters"""
         if "partition-table" in config:
             self.table_type = TYPE_MBR if config["partition-table"] else TYPE_NONE
-            print("Warning: 'partition-table' is deprecated, please use 'partition-table-type'")
+            logger.warning("'partition-table' is deprecated, please use 'partition-table-type'")
         if "gpt" in config:
             self.table_type = TYPE_GPT if config["gpt"] else TYPE_MBR
-            print("Warning: 'gpt' is deprecated, please use 'partition-table-type'")
+            logger.warning("'gpt' is deprecated, please use 'partition-table-type'")
 
     def validate_config_parameters(self) -> None:
         """Validate configuration parameters"""
@@ -188,7 +192,7 @@ class HdImageHandler(ComImageHandler):
                 in_extended = found_extended = True
                 mbr_entries += 1
 
-            print(f"forced_primary: {part.forced_primary}; in_extended: {in_extended}; ")
+            logger.debug(f"forced_primary: {part.forced_primary}; in_extended: {in_extended}; ")
 
             if part.forced_primary:
                 in_extended = False
@@ -325,14 +329,14 @@ class HdImageHandler(ComImageHandler):
         if not image.size:
             image.size = now
 
-        print(f"image size: {image.size},now size: {now}")
+        logger.debug(f"image size: {image.size},now size: {now}")
         if now > image.size:
             raise ImageError("Partition size exceeds image size")
 
         # Final file size determination
         if self.fill or ((self.table_type & TYPE_GPT) and not self.gpt_no_backup):
             self.file_size = image.size
-            print(f"update file size: {self.file_size}")
+            logger.debug(f"update file size: {self.file_size}")
 
 
     def _setup_autoresize_partitions(self, image: Image) -> None:
@@ -386,7 +390,7 @@ class HdImageHandler(ComImageHandler):
             for dep in image.dependencies:
                 if dep.get('image') == part.image:
                     image_path = dep.get('image_path')
-                    print(f"dep: {dep.get('image')}, {dep.get('image_path')}")
+                    logger.debug(f"dep: {dep.get('image')}, {dep.get('image_path')}")
                     break
 
             if os.path.exists(image_path):
@@ -571,7 +575,7 @@ class HdImageHandler(ComImageHandler):
         header_bytes = header.to_bytes()
 
         # Write primary GPT header and partition table
-        print("write gpt")
+        logger.debug("write gpt")
         with open(image.outfile, 'r+b') as f:
             f.seek(512)
             f.write(header_bytes)
@@ -609,7 +613,7 @@ class HdImageHandler(ComImageHandler):
 
             # Write EBR to image
             try:
-                print(f"write ebr at 0x{ebr_offset:x}")
+                logger.debug(f"write ebr at 0x{ebr_offset:x}")
                 with open(image.outfile, 'r+b') as f:
                     f.seek(ebr_offset)
                     f.write(ebr_data)

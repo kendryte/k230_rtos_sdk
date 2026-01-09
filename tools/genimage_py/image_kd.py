@@ -1,3 +1,4 @@
+import logging
 import zlib
 import uuid
 import os
@@ -9,7 +10,10 @@ import stat
 import tempfile
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, Tuple, Iterable
-from .common import ImageHandler, Image, Partition, ImageError, run_command, prepare_image, parse_size, insert_data, safe_to_int
+from .common import ImageHandler, Image, Partition, ImageError, run_command, prepare_image, parse_size, insert_data, safe_to_int, format_size
+
+# Configure logger
+logger = logging.getLogger(__name__)
 from .image_com import *
 
 from .lib.toc import *
@@ -327,7 +331,7 @@ class KdImageHandler(ComImageHandler):
             skip_insert = False
             for record in self.part_records:
                 if record.image_file == image_path:
-                    print(f"Skipping duplicate part: {part.name} image: {image_path}")
+                    logger.debug(f"Skipping duplicate part: {part.name} image: {image_path}")
                     part_record = KdImgPartRecord(
                         image_file=image_path,
                         part=KdImgPart(
@@ -352,7 +356,7 @@ class KdImageHandler(ComImageHandler):
                 continue
             # Write data
 
-            print(f"write name: {part.name} offset: {part.offset} part_size: {part.size},write_offset: {image_write_offset}, child_size: {child_size}, aligned_child_size: {aligned_child_size}")
+            logger.debug(f"write name: {part.name} offset: {part.offset} part_size: {part.size},write_offset: {image_write_offset}, child_size: {child_size}, aligned_child_size: {aligned_child_size}")
             insert_data(image, image_path, aligned_child_size, image_write_offset, padding_byte)
 
             # Generate partition record
@@ -435,8 +439,8 @@ class KdImageHandler(ComImageHandler):
         # print(f"header: chip_info: {header.chip_info}")
         # print(f"header: board_info: {header.board_info}")
 
-        print(f"final header size: {len(final_header_bytes)}; part table size: {len(part_table_data)}")
-        print(f"final header crc32: 0x{final_header_crc:08x}")
+        logger.debug(f"final header size: {len(final_header_bytes)}; part table size: {len(part_table_data)}")
+        logger.debug(f"final header crc32: 0x{final_header_crc:08x}")
 
         try:
             with open(image.outfile, 'r+b') as f:
@@ -456,9 +460,8 @@ class KdImageHandler(ComImageHandler):
             self._validate_file_size(image.outfile, image_write_offset)
 
         image_info = (f"Successfully generated image {image.outfile}, "
-                    f"size {image_write_offset} bytes "
-                    f"(0x{image_write_offset:x})")
-        print(image_info)
+                    f"size {format_size(image_write_offset)}")
+        logger.info(image_info)
 
     def _generate_toc_partition(self, image: Image) -> Image:
         """Generate TOC partition"""
@@ -472,7 +475,7 @@ class KdImageHandler(ComImageHandler):
                 outfile = os.path.join(self.temp, "partition_toc")
             )
             prepare_image(child_image, size=toc_size)
-            print(f"write empty toc partition: {child_image.outfile} size {toc_size}")
+            logger.debug(f"write empty toc partition: {child_image.outfile} size {toc_size}")
             return child_image
 
         # Create TOC partition

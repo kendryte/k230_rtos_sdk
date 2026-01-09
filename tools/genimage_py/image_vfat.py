@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
+import logging
 import os
 import struct
 from typing import Dict, List, Optional, Any
 from .common import ImageHandler, Image, ImageError, run_command, Partition, prepare_image, mountpath, get_tool_path
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 class VFatHandler(ImageHandler):
     """VFAT filesystem handler"""
@@ -87,7 +91,7 @@ class VFatHandler(ImageHandler):
                 with open(image.outfile, 'r+b') as f:
                     f.truncate(last_pos)
                 image.size = last_pos
-                print(f"minimize image size to {last_pos} bytes 0x{last_pos:0x}")
+                logger.info(f"minimize image size to {last_pos} bytes 0x{last_pos:0x}")
 
 
     def _find_last_valid_pos(self, image: Image) -> int:
@@ -121,7 +125,7 @@ class VFatHandler(ImageHandler):
                     
                     # If the size calculated by FAT32 exceeds the actual file size, the field is corrupt, fall back.
                     if total_fat_region_size_32 > current_file_size:
-                        print("DEBUG: FAT32 sector count appears corrupt. Falling back to FAT16 field.")
+                        logger.debug("DEBUG: FAT32 sector count appears corrupt. Falling back to FAT16 field.")
                     else:
                         sectors_per_fat = sectors_per_fat_32
 
@@ -166,7 +170,7 @@ class VFatHandler(ImageHandler):
                     # FAT16 cluster value check: it is considered an allocated or used cluster, including the end-of-chain marker (0xFFF8-0xFFFF), as long as it's not 0x0000 (free) OR 0x0001 (reserved).
                     is_used = lambda entry: entry >= 0x0002
 
-                print(f"DEBUG: Detected FAT Type: {fat_type} (Total Clusters: {total_clusters})")
+                logger.debug(f"DEBUG: Detected FAT Type: {fat_type} (Total Clusters: {total_clusters})")
 
                 # --- 3. Calculate Offsets and Iterate (FAT Iteration) ---
                 data_region_offset = total_fat_region_size
@@ -201,7 +205,7 @@ class VFatHandler(ImageHandler):
 
                 # Calculate the end position of the last cluster
                 final_offset = data_region_offset + (last_used_cluster + 1) * cluster_size_bytes
-                print(f"DEBUG: Last used cluster: {last_used_cluster}")
+                logger.debug(f"DEBUG: Last used cluster: {last_used_cluster}")
                 return final_offset
         except Exception as e:
             raise ImageError(f"Failed to find last valid position: {type(e).__name__} - {str(e)}")

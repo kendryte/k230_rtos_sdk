@@ -4,9 +4,21 @@ import sys
 import subprocess
 import tempfile
 import shutil
+import logging
 from dataclasses import dataclass
 from typing import Optional
 from typing import List, Dict, Optional, Any, Callable
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+def setup_logging(level=logging.INFO):
+    """Setup logging configuration"""
+    logging.basicConfig(
+        level=level,
+        format='%(levelname)s: %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
 
 class ImageError(Exception):
     """Image processing related errors"""
@@ -115,7 +127,7 @@ def insert_data(image: Image, image_path: str, size: int, offset: int, padding_b
         with open(image.outfile, 'r+b') as f_out:
             f_out.seek(offset)
             file_size = os.path.getsize(image_path)  # Get source file size
-            print(f"insert data: {image_path} to {image.outfile} at {offset} size {file_size}")
+            logger.info(f"insert data: {get_sdk_rel_path(image_path)} to {get_sdk_rel_path(image.outfile)} at {format_size(offset)} size {format_size(file_size)}")
             with open(image_path, 'rb') as f_in:
                 chunk_size = 4 * 1024 * 1024  # 4MB chunk
                 remaining = file_size
@@ -128,7 +140,7 @@ def insert_data(image: Image, image_path: str, size: int, offset: int, padding_b
 
             if (pad_size := size - file_size) > 0:
                 f_out.write(padding_byte * pad_size)
-                print(f"write padding: {pad_size} bytes")
+                logger.debug(f"insert data: write padding {pad_size} bytes")
     except IOError as e:
         raise ImageError(f"Failed to write file: {str(e)}")
 
@@ -146,7 +158,7 @@ def mountpath(image: Image) -> str:
 def run_command(cmd: List[str], env: Optional[Dict[str, str]] = None) -> int:
     """Run external command and return result"""
     try:
-        print(f"run: {' '.join(cmd)}")
+        logger.debug(f"run: {' '.join(cmd)}")
         result = subprocess.run(
             cmd,
             stdout=subprocess.PIPE,
@@ -156,7 +168,7 @@ def run_command(cmd: List[str], env: Optional[Dict[str, str]] = None) -> int:
         )
         return 0
     except subprocess.CalledProcessError as e:
-        print(f"Command execution failed: {e.output}", file=sys.stderr)
+        logger.error(f"Command execution failed: {e.output}")
         return e.returncode
 
 def parse_size(size_str: str) -> int:
@@ -273,9 +285,46 @@ def prepare_image(image: Image, size = 0) -> int:
             if not size:
                 size = image.size
             if size:
-                print(f"Preparing image file {image.outfile} size {size} bytes")
+                logger.debug(f"Preparing image file {image.outfile} size {size} bytes")
                 f.seek(size - 1)
                 f.write(b'\x00')
         return 0
     except IOError as e:
         raise ImageError(f"Unable to create image file {image.outfile}: {str(e)}")
+
+def get_sdk_rel_path(full_path):
+    # 1. Get SDK root from env, default to "/"
+    sdk_root = os.environ.get("SDK_SRC_ROOT_DIR", "/")
+    
+    # 2. Normalize paths to fix "//" and remove trailing slashes
+    norm_full = os.path.normpath(full_path)
+    norm_root = os.path.normpath(sdk_root)
+    
+    # 3. Only relativize if the path is actually inside the SDK root
+    # Note: Using commonpath is more robust than startswith for file systems
+    if os.path.commonpath([norm_full, norm_root]) == norm_root:
+        try:
+            return os.path.relpath(norm_full, norm_root)
+        except ValueError:
+            return norm_full
+            
+    # 4. If not under sdk_root, return the original full path
+    return norm_full
+
+def format_size(size_bytes: int) -> str:
+    """
+    Converts an integer (bytes) to a string in KiB, MiB, or GiB.
+    """
+    if size_bytes < 0:
+        return "Invalid size"
+    
+    # Define the units and their 1024-based scaling
+    for unit in ['B', 'KiB', 'MiB', 'GiB', 'TiB']:
+        if size_bytes < 1024.0:
+            # Return formatted string; if B, don't show decimals
+            if unit == 'B':
+                return f"{int(size_bytes)} {unit}"
+            return f"{size_bytes:.2f} {unit}"
+        size_bytes /= 1024.0
+        
+    return f"{size_bytes:.2f} PiB"
