@@ -20,6 +20,10 @@ ifneq ($(shell [ -d ${SDK_BUILD_IMAGES_DIR}/sdcard/ ] && echo 1 || echo 0),1)
 $(shell mkdir -p ${SDK_BUILD_IMAGES_DIR}/sdcard/)
 endif
 
+ifneq ($(shell [ -d ${SDK_RTSMART_BUILD_DIR}/kernel/ ] && echo 1 || echo 0),1)
+$(shell mkdir -p ${SDK_RTSMART_BUILD_DIR}/kernel/)
+endif
+
 .PHONY: all clean distclean menuconfig
 
 .parse_config:
@@ -27,7 +31,7 @@ endif
 	export RTT_CC_PREFIX=$(CROSS_COMPILE_PREFIX); \
 	export RTT_EXEC_PATH=$(CROSS_COMPILE_DIR); \
 	export RTSMART_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/rtsmart; \
-	export RTT_SDK_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR); \
+	export RTT_SDK_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR)/kernel; \
 	export MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp; \
 	cp -f $(SDK_SRC_ROOT_DIR)/include/generated/autoconf.h $(SDK_RTSMART_SRC_DIR)/mpp/include/comm/k_autoconf_comm.h; \
 	cp -f $(SDK_SRC_ROOT_DIR)/include/generated/autoconf.h $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3/k_autoconf_comm.h; \
@@ -49,7 +53,7 @@ kernel: .parse_config
 	export RTT_CC_PREFIX=$(CROSS_COMPILE_PREFIX); \
 	export RTT_EXEC_PATH=$(CROSS_COMPILE_DIR); \
 	export RTSMART_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/rtsmart; \
-	export RTT_SDK_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR); \
+	export RTT_SDK_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR)/kernel; \
 	export MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp; \
 	cd $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3; \
 	rm -f rtthread.{elf,bin}; \
@@ -103,7 +107,7 @@ kernel-clean:
 	export RTT_CC_PREFIX=$(CROSS_COMPILE_PREFIX); \
 	export RTT_EXEC_PATH=$(CROSS_COMPILE_DIR); \
 	export RTSMART_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/rtsmart; \
-	export RTT_SDK_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR); \
+	export RTT_SDK_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR)/kernel; \
 	export MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp; \
 	cd $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3; \
 	rm -f rtthread.elf .config .config.old k_autoconf_comm.h link_stacksize.lds link.lds rtconfig.h; \
