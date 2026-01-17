@@ -67,9 +67,9 @@ mpp:
 	export MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp; \
 	export RTSMART_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/rtsmart; \
 	export MPP_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR)/mpp; \
-	$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/kernel -j$(NCPUS) || exit $?; \
-	$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/userapps/src -j$(NCPUS) || exit $?; \
-	$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/middleware/src -j$(NCPUS) || exit $?; \
+	$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/kernel -j$(NCPUS) all || exit $?; \
+	$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/userapps/src -j$(NCPUS) all || exit $?; \
+	$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/middleware/src -j$(NCPUS) all || exit $?; \
 
 .PHONY: libs
 libs:
@@ -182,11 +182,6 @@ ifeq ($(CONFIG_RTT_ENABLE_BUILD_EXAMPLES),y)
 	$(call sync_dir, $(SDK_RTSMART_SRC_DIR)/examples/elf/, $(SDK_BUILD_IMAGES_DIR)/sdcard/app/examples/)
 endif
 
-endif
-
-ifeq ($(CONFIG_RTSMART_COPY_LIBS_TEST),y)
-	@echo "Copy rtsmart libs examples."
-	$(call sync_dir, $(SDK_RTSMART_BUILD_DIR)/libs/elf/, $(SDK_BUILD_IMAGES_DIR)/sdcard/app/rtsmart_libs_tests/)
 endif
 
 	@echo "Generate ${SDK_BUILD_IMAGES_DIR}/bin/config.txt"

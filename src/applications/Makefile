@@ -5,19 +5,34 @@ endif
 subdirs-y :=
 include apps.mk
 
-# Add directories to the build system
-subdirs := $(sort $(subdirs-y))
-
 .PHONY: all clean distclean
 
-all:
-	@$(foreach dir,$(subdirs),$(MAKE) -C $(dir) all;)
+all: $(subdirs-y)
+	@echo "Make Applications done."
+
+ifneq ($(strip $(subdirs-y)),)
+.PHONY: $(subdirs-y)
+
+$(subdirs-y):
+	@echo "[BUILD] $@"
+	@+$(MAKE) -C $@
+endif
 
 clean:
-	@$(foreach dir,$(subdirs),$(MAKE) -C $(dir) clean;)
+	@if [ -n "$(subdirs-y)" ]; then \
+		for dir in $(subdirs-y); do \
+			echo "[CLEAN] $$dir"; \
+			$(MAKE) -C $$dir clean; \
+		done; \
+	fi
 
 distclean: clean
-	@$(foreach dir,$(subdirs),$(MAKE) -C $(dir) distclean;)
+	@if [ -n "$(subdirs-y)" ]; then \
+		for dir in $(subdirs-y); do \
+			echo "[CLEAN] $$dir"; \
+			$(MAKE) -C $$dir distclean; \
+		done; \
+	fi
 
 .PHONY: gen_kconfig
 gen_kconfig:
