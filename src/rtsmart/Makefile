@@ -24,6 +24,8 @@ ifneq ($(shell [ -d ${SDK_RTSMART_BUILD_DIR}/kernel/ ] && echo 1 || echo 0),1)
 $(shell mkdir -p ${SDK_RTSMART_BUILD_DIR}/kernel/)
 endif
 
+SHELL := bash
+
 .PHONY: all clean distclean menuconfig
 
 .parse_config:
@@ -35,7 +37,7 @@ endif
 	export MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp; \
 	cp -f $(SDK_SRC_ROOT_DIR)/include/generated/autoconf.h $(SDK_RTSMART_SRC_DIR)/mpp/include/comm/k_autoconf_comm.h; \
 	cp -f $(SDK_SRC_ROOT_DIR)/include/generated/autoconf.h $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3/k_autoconf_comm.h; \
-	cd $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3; \
+	pushd $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3; \
 	if [ ! -f configs/${RTSMART_DEFCONFIG} ]; then \
 		echo "Error: Configuration file '${RTSMART_DEFCONFIG}' not found."; \
 		echo "Please ensure that '${RTSMART_DEFCONFIG}' exists in the 'configs' directory."; \
@@ -43,60 +45,71 @@ endif
 	fi; \
 	rm -rf rtconfig.h; \
 	scons --useconfig=configs/${RTSMART_DEFCONFIG} || exit $?; \
-	cd -; \
+	popd; \
 	touch .parse_config
 
 .PHONY: kernel
 kernel: .parse_config
+	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/kernel all \
+		PATH="$(CROSS_COMPILE_DIR):$(PATH)" \
+		MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp \
+		RTSMART_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/rtsmart \
+		MPP_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR)/mpp || exit $?;
+
 	@$(SDK_TOOLS_DIR)/gen_verinfo_h.sh $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3/sdk_version.h
+
 	@export RTT_CC=gcc; \
 	export RTT_CC_PREFIX=$(CROSS_COMPILE_PREFIX); \
 	export RTT_EXEC_PATH=$(CROSS_COMPILE_DIR); \
 	export RTSMART_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/rtsmart; \
 	export RTT_SDK_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR)/kernel; \
 	export MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp; \
-	cd $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3; \
+	pushd $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3; \
 	rm -f rtthread.{elf,bin}; \
 	scons -j$(NCPUS) || exit $?; \
 	cp rtthread.bin ${SDK_BUILD_IMAGES_DIR}/rtsmart; \
-	cd -;
+	popd;
 
 .PHONY: mpp
-mpp:
-	@export PATH="$(CROSS_COMPILE_DIR):$(PATH)"; \
-	export MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp; \
-	export RTSMART_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/rtsmart; \
-	export MPP_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR)/mpp; \
-	$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/kernel -j$(NCPUS) all || exit $?; \
-	$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/userapps/src -j$(NCPUS) all || exit $?; \
-	$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/middleware/src -j$(NCPUS) all || exit $?; \
+mpp: .parse_config
+	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/userapps/src all \
+		PATH="$(CROSS_COMPILE_DIR):$(PATH)" \
+		MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp \
+		RTSMART_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/rtsmart \
+		MPP_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR)/mpp || exit $?;
+
+	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/middleware/src all \
+		PATH="$(CROSS_COMPILE_DIR):$(PATH)" \
+		MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp \
+		RTSMART_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/rtsmart \
+		MPP_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR)/mpp || exit $?;
 
 .PHONY: libs
-libs:
-	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/libs -j$(NCPUS) all || exit $?;
+libs: mpp
+	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/libs all || exit $?;
 
 .PHONY: examples
-examples:
+examples: libs
 ifneq ($(CONFIG_SDK_ENABLE_CANMV),y)
 
 ifeq ($(CONFIG_MPP_ENABLE_USERAPPS_SAMPLES),y)
-	@export PATH="$(CROSS_COMPILE_DIR):$(PATH)"; \
-	export MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp; \
-	export RTSMART_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/rtsmart; \
-	export MPP_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR)/mpp; \
-	$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/userapps/sample -j$(NCPUS) all || exit $?;
+	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/userapps/sample all \
+		PATH="$(CROSS_COMPILE_DIR):$(PATH)" \
+		MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp \
+		RTSMART_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/rtsmart \
+		MPP_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR)/mpp || exit $?;
 endif
 
 ifeq ($(CONFIG_MPP_ENABLE_MIDDLEWARE_SAMPLES),y)
-	@export PATH="$(CROSS_COMPILE_DIR):$(PATH)"; \
-	export MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp; \
-	export RTSMART_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/rtsmart; \
-	export MPP_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR)/mpp; \
-	$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/middleware/sample -j$(NCPUS) all || exit $?;
+	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/middleware/sample all \
+		PATH="$(CROSS_COMPILE_DIR):$(PATH)" \
+		MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp \
+		RTSMART_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/rtsmart \
+		MPP_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR)/mpp || exit $?;
 endif
 
 ifeq ($(CONFIG_RTT_ENABLE_BUILD_EXAMPLES),y)
-	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/examples -j$(NCPUS) all || exit $?;
+	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/examples all || exit $?;
 endif
 
 endif
@@ -109,10 +122,10 @@ kernel-clean:
 	export RTSMART_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/rtsmart; \
 	export RTT_SDK_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR)/kernel; \
 	export MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp; \
-	cd $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3; \
+	pushd $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3; \
 	rm -f rtthread.elf .config .config.old k_autoconf_comm.h link_stacksize.lds link.lds rtconfig.h; \
 	scons -c || exit $?; \
-	cd -; \
+	popd; \
 	rm -rf ${SDK_BUILD_IMAGES_DIR}/rtsmart;
 
 .PHONY: mpp-clean
@@ -143,7 +156,7 @@ endif
 
 endif
 
-all: .parse_config mpp kernel libs examples
+all: .parse_config kernel mpp libs examples
 	@echo "Copy sensor configs from $(SDK_RTSMART_SRC_DIR)/rtsmart/userapps/root/bin/ to ${SDK_BUILD_IMAGES_DIR}/bin/"
 
 ifeq ($(CONFIG_MPP_ENABLE_SENSOR_GC2093),y)
@@ -202,13 +215,13 @@ menuconfig:
 	export RTSMART_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/rtsmart; \
 	export RTT_SDK_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR); \
 	export MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp; \
-	cd $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3; \
+	pushd $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3; \
 	rm -rf rtconfig.h .config .config.old; \
 	scons --useconfig=configs/${RTSMART_DEFCONFIG} || exit $?; \
 	scons --genconfig; \
 	scons --menuconfig; \
 	cp .config configs/${RTSMART_DEFCONFIG}; \
-	cd -;
+	popd;
 
 .PHONY: arduino-sdk arduino-sdk-clean arduino-sdk-distclean
 arduino-sdk:

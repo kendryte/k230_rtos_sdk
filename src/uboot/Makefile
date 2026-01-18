@@ -21,17 +21,15 @@ ifeq ($(CONFIG_UBOOT_USE_PREBUILT),y)
 else
 	@echo "Building U-Boot from source"
 	@cp $(SDK_SRC_ROOT_DIR)/include/generated/autoconf.h $(SDK_UBOOT_SRC_DIR)/uboot/board/kendryte/common/sdk_autoconf.h
-	@export ARCH=riscv; \
-	make -C uboot $(UBOOT_DEFCONFIG) O=$(SDK_UBOOT_BUILD_DIR) || exit $?; \
-	make -j$(NCPUS) -C $(SDK_UBOOT_BUILD_DIR) || exit $?;
+	@$(MAKE) -C uboot $(UBOOT_DEFCONFIG) ARCH=riscv O=$(SDK_UBOOT_BUILD_DIR) || exit $?;
+	@$(MAKE) -C $(SDK_UBOOT_BUILD_DIR) ARCH=riscv || exit $?;
 endif
 
 all: build
 	@python3 $(SDK_TOOLS_DIR)/gen_image_uboot.py -s $(SDK_UBOOT_BUILD_DIR)/spl/u-boot-spl.bin -u $(SDK_UBOOT_BUILD_DIR)/u-boot.bin
 
 clean:
-	@export ARCH=riscv; \
-	if [ -f $(SDK_UBOOT_BUILD_DIR)/Makefile ]; then $(MAKE) -C $(SDK_UBOOT_BUILD_DIR) clean; fi
+	@if [ -f $(SDK_UBOOT_BUILD_DIR)/Makefile ]; then $(MAKE) -C $(SDK_UBOOT_BUILD_DIR) ARCH=riscv clean; fi
 
 distclean: clean
 	@rm -rf $(SDK_UBOOT_BUILD_DIR)

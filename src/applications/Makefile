@@ -15,7 +15,7 @@ ifneq ($(strip $(subdirs-y)),)
 
 $(subdirs-y):
 	@echo "[BUILD] $@"
-	@+$(MAKE) -C $@
+	@$(MAKE) -C $@ all
 endif
 
 clean:

@@ -40,6 +40,14 @@ savedefconfig: $(KCONF) $(SDK_SRC_ROOT_DIR)/.config
 .PHONY: .autoconf
 .autoconf: $(SDK_SRC_ROOT_DIR)/.config.old
 
+.PHONY: rm_image
+rm_image:
+	@rm -rf $(SDK_BUILD_IMAGES_DIR)
+
+.PHONY: prepare
+prepare: .autoconf rm_image
+
+
 %_defconfig: $(KCONF)
 	$(call del_mark)
 
@@ -69,7 +77,7 @@ list-def:
 	@ls $(SDK_SRC_ROOT_DIR)/configs/ | awk -v current="$(MK_LIST_DEFCONFIG)" '{if ($$0 == current) print NR, "[*]", $$0; else print NR, "[ ]", $$0}'
 
 .PHONY: uboot uboot-clean uboot-distclean uboot-menuconfig
-uboot: .autoconf
+uboot: prepare
 	@$(MAKE) -C $(SDK_UBOOT_SRC_DIR) all
 uboot-clean:
 	@$(MAKE) -C $(SDK_UBOOT_SRC_DIR) clean
@@ -80,7 +88,7 @@ uboot-menuconfig:
 
 
 .PHONY: rtsmart rtsmart-clean rtsmart-distclean rtsmart-menuconfig
-rtsmart: .autoconf
+rtsmart: prepare
 	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR) all
 rtsmart-clean:
 	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR) clean
@@ -91,7 +99,7 @@ rtsmart-menuconfig:
 
 
 .PHONY: opensbi opensbi-clean opensbi-distclean
-opensbi: .autoconf rtsmart
+opensbi: prepare rtsmart
 	@$(MAKE) -C $(SDK_OPENSBI_SRC_DIR) all
 opensbi-clean:
 	@$(MAKE) -C $(SDK_OPENSBI_SRC_DIR) clean
@@ -100,7 +108,7 @@ opensbi-distclean:
 
 
 .PHONY: canmv canmv-clean canmv-distclean
-canmv: .autoconf
+canmv: prepare opensbi
 ifeq ($(CONFIG_SDK_ENABLE_CANMV),y)
 	@$(MAKE) -C $(SDK_CANMV_SRC_DIR) all
 endif
@@ -115,7 +123,7 @@ ifeq ($(CONFIG_SDK_ENABLE_CANMV),y)
 endif
 
 .PHONY: app app-clean app-distclean
-app: .autoconf
+app: prepare opensbi
 	@$(MAKE) -C $(SDK_APPS_SRC_DIR) all
 app-clean:
 	@$(MAKE) -C $(SDK_APPS_SRC_DIR) clean
@@ -123,7 +131,7 @@ app-distclean:
 	@$(MAKE) -C $(SDK_APPS_SRC_DIR) distclean
 
 .PHONY: arduino-sdk arduino-sdk-clean arduino-sdk-distclean
-arduino-sdk: .autoconf uboot rtsmart opensbi
+arduino-sdk: prepare uboot rtsmart opensbi
 	@$(MAKE) -C $(SDK_UBOOT_SRC_DIR) arduino-sdk
 	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR) arduino-sdk
 	@$(MAKE) -C $(SDK_OPENSBI_SRC_DIR) arduino-sdk
@@ -136,12 +144,11 @@ arduino-sdk-distclean: uboot-distclean
 	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR) arduino-sdk-distclean
 	@$(MAKE) -C $(SDK_OPENSBI_SRC_DIR) arduino-sdk-distclean
 
-.PHONY: rm_image
-rm_image:
-	@rm -rf $(SDK_BUILD_IMAGES_DIR)
+.PHONY: build
+build: uboot rtsmart opensbi canmv app
 
 .PHONY: all
-all: rm_image uboot rtsmart opensbi canmv app 
+all: build
 	@python3 $(SDK_TOOLS_DIR)/gen_image_rtapp.py
 	@$(SDK_TOOLS_DIR)/gen_image.sh
 	@echo "Build K230 done, board $(CONFIG_BOARD), config $(MK_LIST_DEFCONFIG)"
