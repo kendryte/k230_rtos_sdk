@@ -68,6 +68,16 @@ else
 Q =
 endif
 
+RM = rm -rf
+ECHO = echo
+CP = cp
+MKDIR = mkdir
+SED = sed
+CAT = cat
+TOUCH = touch
+PYTHON = python3
+ZIP = zip
+
 # Check if 'bear' command exists
 BEAR_EXISTS := $(shell command -v bear >/dev/null 2>&1 && echo yes || echo no)
 
