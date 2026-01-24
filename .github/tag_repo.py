@@ -58,7 +58,7 @@ def main():
         print(f"❌ Not a Git repository: {repo_path}")
         sys.exit(1)
 
-    remote_name = run(["git", "remote"], repo_path).splitlines()[0]
+    remote_name = 'github' # run(["git", "remote"], repo_path).splitlines()[0]
 
     print(f"\n📦 Processing repository: {repo_path}")
     print(f"🔖 Tag: {tag_name}")
