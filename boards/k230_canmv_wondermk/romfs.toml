@@ -1,3 +1,0 @@
-[[move]]
-src = "${SDK_BUILD_IMAGES_DIR}/sdcard/micropython"
-dst = "${ROMFS_DIR}/micropython"
