@@ -73,7 +73,7 @@ jobs:
             echo "build project ${proj}"
             echo "-------------------"
             make ${proj}
-            time make log
+            time make -j8
             echo "-------------------"
           done
 
