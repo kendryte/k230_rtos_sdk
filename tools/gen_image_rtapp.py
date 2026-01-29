@@ -33,20 +33,24 @@ def generate_fake_rt_app() -> str:
 
 def main():
     use_fake_rt_app = False
+    delete_original_file = False
     rt_app_file_path = None
+
+    try:
+        delete_original_file = kconfig["CONFIG_FAST_BOOT_DELETE_ORIGIIN_FILE"]
+
+        rt_app_file_path = str(kconfig["CONFIG_FAST_BOOT_FILE_PATH"])
+        if not Path(rt_app_file_path).exists():
+            raise FileNotFoundError(f"User Configure CONFIG_FAST_BOOT_FILE_PATH ({rt_app_file_path}) not exists")
+    except Exception as e:
+        use_fake_rt_app = True
+        rt_app_file_path = None
+        print(f"An error occurred: {e}")
 
     if not kconfig["CONFIG_FAST_BOOT_CONFIGURATION"]:
         use_fake_rt_app = True
 
         print("Generating RTApp use fake rtapp because not enable fastboot")
-    else:
-        try:
-            rt_app_file_path = str(kconfig["CONFIG_FAST_BOOT_FILE_PATH"])
-            if not Path(rt_app_file_path).exists():
-                raise FileNotFoundError(f"User Configure CONFIG_FAST_BOOT_FILE_PATH ({rt_app_file_path}) not exists")
-        except Exception as e:
-            use_fake_rt_app = True
-            print(f"An error occurred: {e}")
 
     if use_fake_rt_app:
         print("Use fake rtapp")
@@ -58,6 +62,9 @@ def main():
 
     gzip_tool = image_tools.K230PrivGzip()
     rtapp_gzipped_file = gzip_tool.compress_file(rt_app_file_path)
+
+    if delete_original_file or use_fake_rt_app:
+        os.remove(rt_app_file_path)
 
     rtapp_image_file = image_tools.generate_temp_file_path("rt_app_", "_img")
 
@@ -72,6 +79,7 @@ def main():
     if not image_tools.generate_k230_image(rtapp_image_file, rtapp_output_file):
         print("RTApp generate image failed")
         sys.exit(1)
+    os.remove(rtapp_image_file)
 
     bin_preload = Path(sdk_build_images_dir) / "bin" / "preload"
 

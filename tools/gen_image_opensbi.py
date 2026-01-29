@@ -147,6 +147,7 @@ def generate_opensbi_rtsmart(opensbi_jump_path, rtsmart_kernel_path):
 
     gzip_tool = image_tools.K230PrivGzip()
     opensbi_rtsmart_gzipped_file = gzip_tool.compress_file(opensbi_jump_padding_rtsmart_file)
+    os.remove(opensbi_jump_padding_rtsmart_file)
 
     opensbi_jump_rtsmart_image_file = image_tools.generate_temp_file_path("opensbi_rtsmart_image_", "_img")
 
@@ -159,6 +160,7 @@ def generate_opensbi_rtsmart(opensbi_jump_path, rtsmart_kernel_path):
     if not image_tools.generate_k230_image(opensbi_jump_rtsmart_image_file, opensbi_rtsmart_output_file):
         print("OpenSBI + RTSmart generate image failed")
         sys.exit(1)
+    os.remove(opensbi_jump_rtsmart_image_file)
 
     print(f"Generate OpenSBI + RTSmart Done.")
 

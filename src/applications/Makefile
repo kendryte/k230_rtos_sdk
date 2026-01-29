@@ -14,23 +14,23 @@ ifneq ($(strip $(subdirs-y)),)
 .PHONY: $(subdirs-y)
 
 $(subdirs-y):
-	@echo "[BUILD] $@"
-	@$(MAKE) -C $@ all
+	@echo "[BUILD] applications $@"
+	@$(MAKE) -C $@ all || exit $?;
 endif
 
 clean:
 	@if [ -n "$(subdirs-y)" ]; then \
 		for dir in $(subdirs-y); do \
-			echo "[CLEAN] $$dir"; \
-			$(MAKE) -C $$dir clean; \
+			echo "[CLEAN] applications $$dir"; \
+			$(MAKE) -C $$dir clean || exit $?; \
 		done; \
 	fi
 
 distclean: clean
 	@if [ -n "$(subdirs-y)" ]; then \
 		for dir in $(subdirs-y); do \
-			echo "[CLEAN] $$dir"; \
-			$(MAKE) -C $$dir distclean; \
+			echo "[DISTCLEAN] applications $$dir"; \
+			$(MAKE) -C $$dir distclean || exit $?; \
 		done; \
 	fi
 

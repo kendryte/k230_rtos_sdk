@@ -96,6 +96,7 @@ def generate_uboot_bin(uboot_path):
     if not image_tools.generate_k230_image(uboot_image_file, uboot_output_file, uboot_secure_boot_type, uboot_secure_boot_config):
         print("U-Boot generate image failed")
         sys.exit(1)
+    os.remove(uboot_image_file)
 
     print(f"Generate U-Boot Done.")
 

@@ -42,7 +42,10 @@ class VFatHandler(ImageHandler):
         cmd = [get_tool_path("mkdosfs"), *extraargs.split(), *label_arg.split(), image.outfile]
         # Filter empty string arguments
         cmd = [arg for arg in cmd if arg]
-        run_command(cmd)
+        
+        # Check if formatting was successful
+        if run_command(cmd) != 0:
+            raise ImageError(f"Failed to create VFAT filesystem on {image.outfile}")
 
         # Process files in partitions
         for part in image.partitions:
@@ -58,24 +61,28 @@ class VFatHandler(ImageHandler):
                 dir_path = os.path.dirname(target)
                 mmd_cmd = [get_tool_path("mmd"), "-DsS", "-i", image.outfile, f"::{dir_path}"]
                 env = os.environ.copy()
-                env["MTOOLS_SKIP_CHECK"] = "1"
-                run_command(mmd_cmd, env=env)
+                if run_command(mmd_cmd, env=env) != 0:
+                    raise ImageError(f"Failed to create directory '::{dir_path}' in VFAT image")
 
             # Copy files to vfat image
             mcopy_cmd = [get_tool_path("mcopy"), "-sp", "-i", image.outfile, src_path, f"::{target}"]
             env = os.environ.copy()
-            env["MTOOLS_SKIP_CHECK"] = "1"
-            run_command(mcopy_cmd, env=env)
+            
+            # Check if copy was successful (will fail if image is too small)
+            if run_command(mcopy_cmd, env=env) != 0:
+                raise ImageError(f"Failed to copy '{src_path}' to VFAT image. The image size may be too small.")
 
         # If not empty image and no partitions, copy files from mountpath
         if not image.empty and not image.partitions:
-            files = os.listdir(mountpath(image))
-            if files:
+            mpath = mountpath(image)
+            if os.path.exists(mpath):
+                files = os.listdir(mpath)
                 for file in files:
-                    mcopy_cmd = [get_tool_path("mcopy"), "-sp", "-i", image.outfile, f"{mountpath(image)}/{file}", "::"]
+                    src_file = os.path.join(mpath, file)
+                    mcopy_cmd = [get_tool_path("mcopy"), "-sp", "-i", image.outfile, src_file, "::"]
                     env = os.environ.copy()
-                    env["MTOOLS_SKIP_CHECK"] = "1"
-                    run_command(mcopy_cmd, env=env)
+                    if run_command(mcopy_cmd, env=env) != 0:
+                        raise ImageError(f"Failed to copy '{file}' from mountpath to VFAT image.")
 
         # Handle image minimization
         if minimize:

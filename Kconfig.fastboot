@@ -6,10 +6,16 @@ menuconfig FAST_BOOT_CONFIGURATION
 
         config FAST_BOOT_FILE_PATH
         string "Fast boot file path"
-        default "${SDK_CANMV_BUILD_DIR}/micropython"
+        default "${SDK_BUILD_IMAGES_DIR}/sdcard/micropython"
         help
             Path to the file to be packaged as rtapp.elf.gz, you can use absolute path
             Or you can use ${SDK_*} variables which will be expanded at build time.
-            Example: ${SDK_CANMV_BUILD_DIR}/micropython
+            Example: ${SDK_BUILD_IMAGES_DIR}/sdcard/micropython
+
+        config FAST_BOOT_DELETE_ORIGIIN_FILE
+            bool "Delete Origin Fastboot App"
+            default y
+            help
+                Delete the original Fast boot file, so it will not exists in filesystem.
 
     endif

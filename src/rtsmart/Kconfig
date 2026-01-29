@@ -82,7 +82,4 @@ menu "RT-Smart Configuration"
             default n
     endmenu
 
-    comment "Examples Configuration"
-    source "$(SDK_BUILD_DIR)/Kconfig.rtt_examples"
-
 endmenu

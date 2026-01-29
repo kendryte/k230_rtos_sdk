@@ -164,7 +164,8 @@ def run_command(cmd: List[str], env: Optional[Dict[str, str]] = None) -> int:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
-            env=env
+            env=env,
+            check=True
         )
         return 0
     except subprocess.CalledProcessError as e:
