@@ -34,6 +34,10 @@ menu "Board Configuration"
         config BOARD_K230_CANMV_HIWONDER
             bool "K230 CanMV Hiwonder, Onboard 1GiB LPDDR4"
             select BOARD_CHIP_K230
+            
+        config BOARD_K230_CANMV_WONDERMK
+	        bool "K230 CanMV WonderMK, Onboard 1GiB LPDDR4"
+	        select BOARD_CHIP_K230
 
         config BOARD_K230_CANMV_GT6700
             bool "K230 CanMV GT6700, Onboard 1GiB LPDDR4"
@@ -109,6 +113,7 @@ menu "Board Configuration"
         default "CanMV_K230_YAHBOOM" if BOARD_K230_CANMV_YAHBOOM
         default "CanMV_K230_01Studio" if BOARD_K230_CANMV_01STUDIO
         default "CanMV_K230_Hiwonder" if BOARD_K230_CANMV_HIWONDER
+        default "CanMV_K230_WonderMK" if BOARD_K230_CANMV_WONDERMK
         default "CanMV_K230_GT6700" if BOARD_K230_CANMV_GT6700
         default "CanMV_K230_RTT_EVB_BOARD" if BOARD_K230_CANMV_RTT_EVB
         default "CanMV_K230D_Zero" if BOARD_K230D_CANMV_BPI_ZERO
@@ -127,7 +132,7 @@ menu "Board Configuration"
     menu "Memory Layout"
         config AUTO_DETECT_DDR_SIZE
             bool "Auto Detect DRAM Size"
-                default y  if BOARD_K230_CANMV_01STUDIO ||  BOARD_K230_CANMV_DONGSHANPI || BOARD_K230_CANMV_HIWONDER
+                default y  if BOARD_K230_CANMV_01STUDIO ||  BOARD_K230_CANMV_DONGSHANPI || BOARD_K230_CANMV_HIWONDER || BOARD_K230_CANMV_WONDERMK
                 default n
 
         source "$(SDK_BOARDS_DIR)/Kconfig.memory_auto"
@@ -153,6 +158,7 @@ menu "Board Configuration"
     source "$(SDK_BOARDS_DIR)/k230_canmv_lckfb/Kconfig"
     source "$(SDK_BOARDS_DIR)/k230_canmv_01studio/Kconfig"
     source "$(SDK_BOARDS_DIR)/k230_canmv_hiwonder/Kconfig"
+    source "$(SDK_BOARDS_DIR)/k230_canmv_wondermk/Kconfig"
     source "$(SDK_BOARDS_DIR)/k230_canmv_gt6700/Kconfig"
     source "$(SDK_BOARDS_DIR)/k230d_canmv_bpi_zero/Kconfig"
     source "$(SDK_BOARDS_DIR)/k230d_canmv_junroc_ai_cam/Kconfig"
