@@ -11,7 +11,7 @@ BIN 	:= $(SDK_APPS_IMAGE_DIR)/$(DIR)
 SRC_DIRS  := .
 
 SRCS 	:= $(shell find $(SRC_DIRS) -maxdepth 1 -type f \( -name "*.c" -o -name "*.cpp" -o -name "*.cc" \))
-OBJS	:= $(addprefix $(BUILD)/, $(addsuffix .o, $(basename $(notdir $(C_SRCS) $(CXX_SRCS)))))
+OBJS	:= $(addprefix $(BUILD)/, $(addsuffix .o, $(basename $(notdir $(SRCS)))))
 DEPS	:= $(OBJS:.o=.d)
 
 # Directory creation logic - Captured and sorted
