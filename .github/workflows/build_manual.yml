@@ -70,7 +70,7 @@ jobs:
             echo "-------------------"
             echo "build project ${proj}"
             echo "-------------------"
-            make ${proj}
+            make ${proj} ENABLE_ALL_SAMPLES=1
             time make -j8
             echo "-------------------"
           done

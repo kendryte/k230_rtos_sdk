@@ -53,9 +53,20 @@ prepare: .autoconf rm_image
 
 	$(call gen_kconfig,$(SDK_CANMV_SRC_DIR),canmv)
 	$(call gen_kconfig,$(SDK_RTSMART_SRC_DIR)/examples,rtt_examples)
-	@make -C $(SDK_APPS_SRC_DIR) gen_kconfig || exit $?
+	@make -C $(SDK_APPS_SRC_DIR) gen_kconfig || exit 1
 
-	@$(KCONF) --defconfig $(SDK_SRC_ROOT_DIR)/configs/$@ $(SDK_SRC_ROOT_DIR)/Kconfig || exit $?
+	@if [ -f "$(SDK_SRC_ROOT_DIR)/tools/merge_configs.py" ]; then \
+		$(PYTHON) $(SDK_SRC_ROOT_DIR)/tools/merge_configs.py \
+			--defconfig "$(SDK_SRC_ROOT_DIR)/configs/$@" \
+			--output .defconfig.tmp \
+			--samples "$(SDK_SRC_ROOT_DIR)/tools/all_samples_config" \
+			--enable-samples "$(ENABLE_ALL_SAMPLES)"; \
+	else \
+		cp "$(SDK_SRC_ROOT_DIR)/configs/$@" .defconfig.tmp; \
+	fi
+
+	@$(KCONF) --defconfig .defconfig.tmp "$(SDK_SRC_ROOT_DIR)/Kconfig" || exit 1
+	@rm -f .defconfig.tmp
 
 	@if [ ! -d "$(SDK_CANMV_SRC_DIR)" ]; then \
 		echo "canmv does not exist, updating CONFIG_SDK_ENABLE_CANMV in .config"; \
