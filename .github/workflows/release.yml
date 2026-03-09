@@ -35,7 +35,7 @@ jobs:
         run: |
           rm -rf *
           ls -alh
-          ~/.bin/repo init -u git@github.com:canmv-k230/manifest.git
+          ~/.bin/repo init -u git@github.com:canmv-k230/manifest.git -m rtos_${{ github.ref_name }}.xml
           ~/.bin/repo sync
 
       # - name: Tag Subprojects
