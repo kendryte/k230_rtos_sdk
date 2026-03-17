@@ -200,6 +200,12 @@ else
 	@$(MAKE) -f $(SDK_TOOLS_DIR)/toolchain_linux.mk install
 endif
 
+# Generate DDR test image targets using pattern rule
+ddr_test_%:
+	@echo "Build DDR test image, size: $* MB"
+	@sed -i 's/.*CONFIG_UBOOT_USE_PREBUILT.*/# CONFIG_UBOOT_USE_PREBUILT is not set/' .config
+	@python3 tools/gen_ddr_test_img.py $*
+
 .PHONY: help
 help:
 	@echo "Usage: "
@@ -235,6 +241,7 @@ else
 endif
 	@echo "make log                      -- Make all and generate log.txt";
 	@echo "make dl_toolchain             -- Download toolchain, only need run at first time";
+	@echo "make ddr_test_<size>      	 -- Build DDR test image (sizes: 128, 512, 1024, 2048 MB)"
 	@echo "make arduino-sdk              -- Generate arduino-sdk";
 	@echo "Supported board configs";
 	@ls $(SDK_SRC_ROOT_DIR)/configs/ | awk '{print "\t", $$0}'
