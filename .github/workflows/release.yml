@@ -62,9 +62,6 @@ jobs:
           source ~/.canmv_venv/bin/activate
           projects=(
             "k230_rtos_01studio_defconfig"
-            "k230_rtos_aihardware_defconfig"
-            "k230_rtos_evb_defconfig"
-            "k230_rtos_evb_spinand_defconfig"
             "k230_rtos_lckfb_defconfig"
           )
           echo "Config list is ${projects}"

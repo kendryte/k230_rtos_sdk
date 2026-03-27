@@ -102,14 +102,13 @@ gen_ota_image()
 
 parse_repo_version()
 {
-    pushd "${SDK_CANMV_SRC_DIR}" > /dev/null
+    local repo_dir="$1"
+    local revision
 
-    # Get the revision and store it in a variable
+    pushd "$repo_dir" > /dev/null || return 1
     revision=$(git describe --long --tag --dirty --always)
+    popd > /dev/null || return 1
 
-    popd > /dev/null
-
-    # Print the revision to be captured by the caller
     echo "$revision"
 }
 
