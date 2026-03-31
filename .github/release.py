@@ -43,9 +43,17 @@ CANMV_EXTRA_REPOS = [
     # ("src/canmv/resources/ybsdcard", "canmv-k230/ybsdcard"),
 ]
 
-SDK_REPOS = {
+# Branch: both SDKs include shared repos (unique branch names per SDK)
+BRANCH_REPOS = {
     "rtos": SHARED_REPOS + RTOS_EXTRA_REPOS,
     "canmv": SHARED_REPOS + CANMV_EXTRA_REPOS,
+}
+
+# Tag: canmv excludes k230_rtos_sdk (it gets the rtos version tag, not canmv)
+SHARED_REPOS_NO_SDK = [r for r in SHARED_REPOS if r[0] != "."]
+TAG_REPOS = {
+    "rtos": SHARED_REPOS + RTOS_EXTRA_REPOS,
+    "canmv": SHARED_REPOS_NO_SDK + CANMV_EXTRA_REPOS,
 }
 
 DEFAULT_REMOTE = "github"
@@ -229,7 +237,7 @@ def generate_manifest(sdk, branch_name, repo_root, dry_run=False):
     Generate a release manifest XML by freezing with `repo manifest -r`,
     then updating branched repos' revision to the release branch name.
     """
-    branched_paths = {path for path, _ in SDK_REPOS[sdk]}
+    branched_paths = {path for path, _ in BRANCH_REPOS[sdk]}
 
     # Step 1: Use `repo manifest -r` to get a fully frozen manifest
     print("  Running: repo manifest -r")
@@ -297,10 +305,11 @@ def generate_manifest(sdk, branch_name, repo_root, dry_run=False):
 
 # ─── Orchestrator ─────────────────────────────────────────────────────────────
 
-def resolve_repos(sdk):
-    repos = SDK_REPOS.get(sdk)
+def resolve_repos(action, sdk):
+    repo_map = BRANCH_REPOS if action == "branch" else TAG_REPOS
+    repos = repo_map.get(sdk)
     if repos is None:
-        print(f"{RED}Error: Unknown SDK type '{sdk}'. Choose from: {', '.join(SDK_REPOS)}{NC}")
+        print(f"{RED}Error: Unknown SDK type '{sdk}'. Choose from: {', '.join(repo_map)}{NC}")
         sys.exit(1)
     return repos
 
@@ -317,7 +326,7 @@ def process_repos(action, sdk, name, remote, dry_run, repo_root):
         dry_run: if True, skip git write operations
         repo_root: absolute path to the workspace root
     """
-    repos = resolve_repos(sdk)
+    repos = resolve_repos(action, sdk)
     op_fn = create_branch if action == "branch" else create_tag
     op_label = "branching" if action == "branch" else "tagging"
 
@@ -422,7 +431,7 @@ def main():
         "action", choices=["branch", "tag"], help="operation to perform"
     )
     parser.add_argument(
-        "sdk", choices=list(SDK_REPOS), help="SDK type (determines repo set)"
+        "sdk", choices=list(BRANCH_REPOS), help="SDK type (determines repo set)"
     )
     parser.add_argument("version", help="version string, e.g. v0.8")
     parser.add_argument(
