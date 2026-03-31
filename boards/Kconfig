@@ -83,6 +83,10 @@ menu "Board Configuration"
             bool "K230D CanMV LabPlus Ai Camera"
             select BOARD_CHIP_K230D
 
+        config BOARD_K230D_CANMV_LABPLUS_AI_CAMERA_V2
+            bool "K230D CanMV LabPlus Ai Camera V2"
+            select BOARD_CHIP_K230D
+
         config BOARD_K230_LABPLUS_1956
             bool "K230 CanMV LabPlus 1956"
             select BOARD_CHIP_K230
@@ -109,6 +113,7 @@ menu "Board Configuration"
         default "k230_evb" if BOARD_K230_EVB
         default "k230d_evb" if BOARD_K230D_EVB
         default "k230d_labplus_ai_camera" if BOARD_K230D_CANMV_LABPLUS_AI_CAMERA
+        default "k230d_labplus_ai_camera_v2" if BOARD_K230D_CANMV_LABPLUS_AI_CAMERA_V2
         default "k230_labplus_1956" if BOARD_K230_LABPLUS_1956
 
     config BOARD_NAME
@@ -130,6 +135,7 @@ menu "Board Configuration"
         default "K230_EVB" if BOARD_K230_EVB
         default "K230D_EVB" if BOARD_K230D_EVB
         default "CanMV_K230D_LabPlusAiCamera" if BOARD_K230D_CANMV_LABPLUS_AI_CAMERA
+        default "CanMV_K230D_LabPlusAiCamera_V2" if BOARD_K230D_CANMV_LABPLUS_AI_CAMERA_V2
         default "CanMV_K230_LabPlus_1956" if BOARD_K230_LABPLUS_1956
 
     config BOARD_GEN_IMAGE_CFG_FILE
@@ -176,6 +182,7 @@ menu "Board Configuration"
     source "$(SDK_BOARDS_DIR)/k230d_canmv_atk_dnk230d/Kconfig"
     source "$(SDK_BOARDS_DIR)/k230_evb/Kconfig"
     source "$(SDK_BOARDS_DIR)/k230d_labplus_ai_camera/Kconfig"
+    source "$(SDK_BOARDS_DIR)/k230d_labplus_ai_camera_v2/Kconfig"
     source "$(SDK_BOARDS_DIR)/k230_labplus_1956/Kconfig"
 
 endmenu
