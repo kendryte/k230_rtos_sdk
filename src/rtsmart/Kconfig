@@ -59,6 +59,10 @@ menu "RT-Smart Configuration"
         endif
 
     menu "RT-Thread Smart System Features"
+        config ENABLE_DUAL_CDC_PORT
+            bool "Enable dual CDC ACM ports"
+            default n
+
         config ENABLE_NETWORK_RT_LAN_OVER_USB
             bool "Enable Network RT-Thread Lan(eth) over USB"
             default y
