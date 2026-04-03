@@ -52,8 +52,8 @@ BRANCH_REPOS = {
 # Tag: canmv excludes k230_rtos_sdk (it gets the rtos version tag, not canmv)
 SHARED_REPOS_NO_SDK = [r for r in SHARED_REPOS if r[0] != "."]
 TAG_REPOS = {
-    "rtos": SHARED_REPOS + RTOS_EXTRA_REPOS,
-    "canmv": SHARED_REPOS_NO_SDK + CANMV_EXTRA_REPOS,
+    "rtos": SHARED_REPOS_NO_SDK + RTOS_EXTRA_REPOS,
+    "canmv": SHARED_REPOS_NO_SDK,
 }
 
 DEFAULT_REMOTE = "github"
@@ -96,7 +96,7 @@ def branch_exists_local(branch, cwd):
 def branch_exists_remote(branch, remote, cwd):
     try:
         output = run(["git", "ls-remote", "--heads", remote], cwd)
-        return f"refs/heads/{branch}" in output
+        return any(line.endswith(f"refs/heads/{branch}") for line in output.splitlines())
     except subprocess.CalledProcessError:
         return False
 
@@ -112,14 +112,17 @@ def tag_exists_local(tag, cwd):
 def tag_exists_remote(tag, remote, cwd):
     try:
         output = run(["git", "ls-remote", "--tags", remote], cwd)
-        return f"refs/tags/{tag}" in output
+        return any(line.endswith(f"refs/tags/{tag}") for line in output.splitlines())
     except subprocess.CalledProcessError:
         return False
 
 
-def get_last_tag(cwd):
+def get_last_tag(cwd, match=None):
     try:
-        return run(["git", "describe", "--tags", "--abbrev=0"], cwd)
+        cmd = ["git", "describe", "--tags", "--abbrev=0"]
+        if match:
+            cmd += ["--match", match]
+        return run(cmd, cwd)
     except subprocess.CalledProcessError:
         return None
 
@@ -201,7 +204,8 @@ def create_tag(repo_path, tag_name, remote, dry_run=False):
     if not local and not on_remote:
         print("🆕 Creating new annotated tag...")
 
-        last_tag = get_last_tag(repo_path)
+        sdk_prefix = tag_name.split("-v")[0]
+        last_tag = get_last_tag(repo_path, match=f"{sdk_prefix}-v*")
         if last_tag:
             print(f"ℹ️  Last tag found: {last_tag}")
             log = get_commit_log(last_tag, repo_path)
@@ -451,7 +455,7 @@ def main():
     if args.action == "branch":
         name = f"release/{args.sdk}-{args.version}"
     else:
-        name = args.version
+        name = f"{args.sdk}-{args.version}"
 
     # Resolve repo root: script lives in .github/, root is one level up
     script_dir = os.path.dirname(os.path.abspath(__file__))
