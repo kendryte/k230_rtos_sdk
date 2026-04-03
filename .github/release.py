@@ -52,8 +52,8 @@ BRANCH_REPOS = {
 # Tag: canmv excludes k230_rtos_sdk (it gets the rtos version tag, not canmv)
 SHARED_REPOS_NO_SDK = [r for r in SHARED_REPOS if r[0] != "."]
 TAG_REPOS = {
-    "rtos": SHARED_REPOS + RTOS_EXTRA_REPOS,
-    "canmv": SHARED_REPOS_NO_SDK + CANMV_EXTRA_REPOS,
+    "rtos": SHARED_REPOS_NO_SDK + RTOS_EXTRA_REPOS,
+    "canmv": SHARED_REPOS_NO_SDK,
 }
 
 DEFAULT_REMOTE = "github"
