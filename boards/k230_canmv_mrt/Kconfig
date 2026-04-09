@@ -1,0 +1,4 @@
+if BOARD_K230_CANMV_HIWONDER
+    config BOARD_NOT_SUPPORT_HW_RTC
+        def_bool y
+endif

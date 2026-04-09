@@ -91,6 +91,10 @@ menu "Board Configuration"
             bool "K230 CanMV LabPlus 1956"
             select BOARD_CHIP_K230
 
+        config BOARD_K230_CANMV_MRT
+            bool "K230 CanMV MRT"
+            select BOARD_CHIP_K230
+
     endchoice
 
     config BOARD
@@ -115,6 +119,7 @@ menu "Board Configuration"
         default "k230d_labplus_ai_camera" if BOARD_K230D_CANMV_LABPLUS_AI_CAMERA
         default "k230d_labplus_ai_camera_v2" if BOARD_K230D_CANMV_LABPLUS_AI_CAMERA_V2
         default "k230_labplus_1956" if BOARD_K230_LABPLUS_1956
+        default "k230_canmv_mrt" if BOARD_K230_CANMV_MRT
 
     config BOARD_NAME
         string "Board Generate Image Name"
@@ -137,6 +142,7 @@ menu "Board Configuration"
         default "CanMV_K230D_LabPlusAiCamera" if BOARD_K230D_CANMV_LABPLUS_AI_CAMERA
         default "CanMV_K230D_LabPlusAiCamera_V2" if BOARD_K230D_CANMV_LABPLUS_AI_CAMERA_V2
         default "CanMV_K230_LabPlus_1956" if BOARD_K230_LABPLUS_1956
+        default "CanMV_K230_MRT" if BOARD_K230_CANMV_MRT
 
     config BOARD_GEN_IMAGE_CFG_FILE
         string "Board specified generate image configure file"
@@ -184,5 +190,6 @@ menu "Board Configuration"
     source "$(SDK_BOARDS_DIR)/k230d_labplus_ai_camera/Kconfig"
     source "$(SDK_BOARDS_DIR)/k230d_labplus_ai_camera_v2/Kconfig"
     source "$(SDK_BOARDS_DIR)/k230_labplus_1956/Kconfig"
+    source "$(SDK_BOARDS_DIR)/k230_canmv_mrt/Kconfig"
 
 endmenu
