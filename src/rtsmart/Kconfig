@@ -42,7 +42,13 @@ menu "RT-Smart Configuration"
 
     config RTT_AUTO_EXEC_CMD
         string "Rtsmart auto execute command string"
-        default "/bin/preload &"
+        default "@preload &" if FAST_BOOT_CONFIGURATION
+        default ""
+        help
+            Under Secure Boot, this command must start with @preload.
+            @preload is an internal auto-exec trigger, not an msh command.
+            Use @preload only when FAST_BOOT_CONFIGURATION is enabled and a
+            real rtapp image is preloaded by U-Boot and described by ATAG.
 
     menuconfig RT_AUTO_RESIZE_PARTITION
         bool "Enable auto resize partition"

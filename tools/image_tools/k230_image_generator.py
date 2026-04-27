@@ -18,6 +18,7 @@ import codecs
 import argparse
 import logging
 import json
+import secrets
 from pathlib import Path
 from typing import Tuple, Optional, Union, Dict, Any
 from dataclasses import dataclass, field
@@ -64,6 +65,38 @@ def load_config_from_file(config_path: str) -> Dict[str, Any]:
     return config_data
 
 
+STAGE_SECTION_NAMES = ("spl", "firmware")
+
+
+def get_top_level_config_section(
+    config_data: Dict[str, Any],
+    config_path: str,
+    section_name: str,
+) -> Optional[Dict[str, Any]]:
+    section = config_data.get(section_name)
+    if section is None:
+        return None
+
+    if not isinstance(section, dict):
+        raise ValueError(f"Section '{section_name}' in {config_path} must be an object")
+
+    return section
+
+
+def select_stage_config(config_data: Dict[str, Any], config_path: str, section_name: Optional[str]) -> Dict[str, Any]:
+    if section_name is None:
+        return config_data
+
+    stage_config = get_top_level_config_section(config_data, config_path, section_name)
+    if stage_config is not None:
+        return stage_config
+
+    if any(section in config_data for section in STAGE_SECTION_NAMES):
+        raise ValueError(f"Missing '{section_name}' section in {config_path}")
+
+    return config_data
+
+
 def hex_string_to_bytes(hex_str: str) -> bytes:
     """Convert hex string to bytes
     
@@ -101,9 +134,249 @@ def bytes_to_hex_string(data: bytes) -> str:
     return data.hex()
 
 
+def optional_bytes_to_hex_string(data: Optional[bytes]) -> str:
+    if data is None:
+        return ""
+
+    return bytes_to_hex_string(data)
+
+
+def validate_exact_length(field_name: str, value: bytes, expected_length: int) -> None:
+    if len(value) != expected_length:
+        raise ValueError(
+            f"{field_name} must be exactly {expected_length} bytes, got {len(value)} bytes"
+        )
+
+
+def validate_max_length(field_name: str, value: bytes, max_length: int) -> None:
+    if len(value) > max_length:
+        raise ValueError(
+            f"{field_name} must be at most {max_length} bytes, got {len(value)} bytes"
+        )
+
+
+def require_dict(config_data: Dict[str, Any], section_name: str) -> Dict[str, Any]:
+    section = config_data.get(section_name)
+    if not isinstance(section, dict):
+        raise ValueError(f"Missing required '{section_name}' section")
+
+    return section
+
+
+def parse_required_bytes(section: Dict[str, Any], section_name: str, key: str) -> bytes:
+    if key not in section:
+        raise ValueError(f"Missing required field '{section_name}.{key}'")
+
+    value = section[key]
+    if not isinstance(value, str):
+        raise ValueError(f"Field '{section_name}.{key}' must be a string")
+
+    if value == "":
+        raise ValueError(f"Field '{section_name}.{key}' must not be empty")
+
+    try:
+        return hex_string_to_bytes(value)
+    except Exception as exc:
+        raise ValueError(f"Field '{section_name}.{key}' is not valid hex data") from exc
+
+
+def parse_optional_bytes(section: Dict[str, Any], section_name: str, key: str, default: bytes = b"") -> bytes:
+    if key not in section:
+        return default
+
+    value = section[key]
+    if not isinstance(value, str):
+        raise ValueError(f"Field '{section_name}.{key}' must be a string")
+
+    try:
+        return hex_string_to_bytes(value)
+    except Exception as exc:
+        raise ValueError(f"Field '{section_name}.{key}' is not valid hex data") from exc
+
+
+def resolve_stage_iv_with_rom_policy(
+    section: Dict[str, Any],
+    section_name: str,
+    key: str,
+    rom_iv: bytes,
+    use_rom_iv: bool,
+    stage_name: Optional[str],
+) -> bytes:
+    if not use_rom_iv:
+        return parse_required_bytes(section, section_name, key)
+
+    if key not in section:
+        return rom_iv
+
+    stage_label = stage_name if stage_name is not None else "default"
+    value = section[key]
+    if not isinstance(value, str):
+        logging.warning(
+            "Ignoring %s.%s for stage '%s' and using the fixed BROM IV",
+            section_name,
+            key,
+            stage_label,
+        )
+        return rom_iv
+
+    try:
+        configured_iv = hex_string_to_bytes(value)
+    except Exception:
+        logging.warning(
+            "Ignoring invalid %s.%s for stage '%s' and using the fixed BROM IV",
+            section_name,
+            key,
+            stage_label,
+        )
+        return rom_iv
+
+    if configured_iv != rom_iv:
+        logging.warning(
+            "Overriding %s.%s for stage '%s' with the fixed BROM IV",
+            section_name,
+            key,
+            stage_label,
+        )
+
+    return rom_iv
+
+
+def parse_required_string_or_hex(section: Dict[str, Any], section_name: str, key: str) -> bytes:
+    if key not in section:
+        raise ValueError(f"Missing required field '{section_name}.{key}'")
+
+    value = section[key]
+    if isinstance(value, str):
+        if value == "":
+            raise ValueError(f"Field '{section_name}.{key}' must not be empty")
+        return value.encode("utf-8")
+
+    raise ValueError(f"Field '{section_name}.{key}' must be a string")
+
+
+def parse_required_int(section: Dict[str, Any], section_name: str, key: str) -> int:
+    if key not in section:
+        raise ValueError(f"Missing required field '{section_name}.{key}'")
+
+    value = section[key]
+    if isinstance(value, int):
+        return value
+
+    if isinstance(value, str):
+        try:
+            return int(value, 0)
+        except ValueError as exc:
+            raise ValueError(f"Field '{section_name}.{key}' is not a valid integer") from exc
+
+    raise ValueError(f"Field '{section_name}.{key}' must be an integer or integer string")
+
+
+def parse_optional_int(section: Dict[str, Any], section_name: str, key: str) -> Optional[int]:
+    if key not in section:
+        return None
+
+    return parse_required_int(section, section_name, key)
+
+
+def parse_optional_reference(section: Dict[str, Any], section_name: str, key: str) -> Optional[str]:
+    if key not in section:
+        return None
+
+    value = section[key]
+    if not isinstance(value, str):
+        raise ValueError(f"Field '{section_name}.{key}' must be a string")
+    if value == "":
+        raise ValueError(f"Field '{section_name}.{key}' must not be empty")
+
+    return value
+
+
+def resolve_config_reference_path(config_path: str, reference: str) -> Path:
+    candidate = Path(reference).expanduser()
+    if candidate.is_absolute():
+        return validate_file_exists(str(candidate))
+
+    search_roots = [Path(config_path).resolve().parent]
+
+    for env_var in ("SDK_BOARD_DIR", "SDK_SRC_ROOT_DIR"):
+        env_path = os.getenv(env_var)
+        if env_path:
+            root = Path(env_path).expanduser()
+            if root.is_dir():
+                search_roots.append(root)
+
+    search_roots.append(Path.cwd())
+
+    for root in search_roots:
+        resolved = root / candidate
+        if resolved.exists() and resolved.is_file():
+            return resolved.resolve()
+
+    raise ValueError(f"Referenced file not exists {reference}")
+
+
+def import_rsa_key_from_file(config_path: str, reference: str, require_private: bool) -> RSA.RsaKey:
+    key_bytes = resolve_config_reference_path(config_path, reference).read_bytes()
+    imported_key = RSA.import_key(key_bytes)
+
+    if require_private and not imported_key.has_private():
+        raise ValueError(f"RSA key file '{reference}' does not contain a private key")
+
+    return imported_key
+
+
+def apply_rsa_key_material_from_file(
+    config: 'FirmwareConfig',
+    rsa_config: Dict[str, Any],
+    config_path: str,
+) -> None:
+    public_key_ref = parse_optional_reference(rsa_config, 'rsa', 'public_key_file')
+    private_key_ref = parse_optional_reference(rsa_config, 'rsa', 'private_key_file')
+
+    public_key = import_rsa_key_from_file(config_path, public_key_ref, require_private=False) if public_key_ref else None
+    private_key = import_rsa_key_from_file(config_path, private_key_ref, require_private=True) if private_key_ref else None
+
+    if public_key is not None:
+        file_modulus = public_key.n.to_bytes((public_key.n.bit_length() + 7) // 8, byteorder='big')
+        file_exponent = hex(public_key.e)
+        if config.RSA_MODULUS is None:
+            config.RSA_MODULUS = file_modulus
+        elif config.RSA_MODULUS != file_modulus:
+            raise ValueError("Configured rsa.modulus does not match rsa.public_key_file")
+        if config.RSA_EXPONENT is None:
+            config.RSA_EXPONENT = file_exponent
+        elif int(config.RSA_EXPONENT, 0) != public_key.e:
+            raise ValueError("Configured rsa.exponent does not match rsa.public_key_file")
+        if config.RSA_KEYSIZE is None:
+            config.RSA_KEYSIZE = public_key.n.bit_length()
+
+    if private_key is not None:
+        file_modulus = private_key.n.to_bytes((private_key.n.bit_length() + 7) // 8, byteorder='big')
+        file_exponent = hex(private_key.e)
+        file_private_exponent = private_key.d.to_bytes((private_key.n.bit_length() + 7) // 8, byteorder='big')
+        if config.RSA_MODULUS is None:
+            config.RSA_MODULUS = file_modulus
+        elif config.RSA_MODULUS != file_modulus:
+            raise ValueError("Configured rsa.modulus does not match rsa.private_key_file")
+        if config.RSA_EXPONENT is None:
+            config.RSA_EXPONENT = file_exponent
+        elif int(config.RSA_EXPONENT, 0) != private_key.e:
+            raise ValueError("Configured rsa.exponent does not match rsa.private_key_file")
+        if config.RSA_PRIVATE_EXPONENT is None:
+            config.RSA_PRIVATE_EXPONENT = file_private_exponent
+        elif config.RSA_PRIVATE_EXPONENT != file_private_exponent:
+            raise ValueError("Configured rsa.private_exponent does not match rsa.private_key_file")
+        if config.RSA_KEYSIZE is None:
+            config.RSA_KEYSIZE = private_key.n.bit_length()
+
+
 # ============================================================================
 # Configuration Constants
 # ============================================================================
+
+ROM_AES_IV = b'\x9f\xf1\x85\x63\xb9\x78\xec\x28\x1b\x3f\x27\x94'
+ROM_SM4_IV = b'\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f'
+AES_GCM_IV_LEN = 12
 
 @dataclass
 class FirmwareConfig:
@@ -122,29 +395,30 @@ class FirmwareConfig:
     VERSION_BYTES: bytes = b'\x00\x00\x00\x00'
     
     # AES-GCM parameters
-    AES_IV: bytes = b'\x9f\xf1\x85\x63\xb9\x78\xec\x28\x1b\x3f\x27\x94'
-    AES_KEY: bytes = b'\x24\x50\x1a\xd3\x84\xe4\x73\x96\x3d\x47\x6e\xdc\xfe\x08\x20\x52\x37\xac\xfd\x49\xb5\xb8\xf3\x38\x57\xf8\x11\x4e\x86\x3f\xec\x7f'
+    AES_IV: Optional[bytes] = None
+    AES_USE_EMBEDDED_IV: bool = False
+    AES_KEY: Optional[bytes] = None
     AES_AUTH_DATA: bytes = b''
     
     # RSA-2048 parameters
-    RSA_KEYSIZE: int = 2048
-    RSA_MODULUS: bytes = b'\xce\xa8\x04\x75\x32\x4c\x1d\xc8\x34\x78\x27\x81\x8d\xa5\x8b\xac\x06\x9d\x34\x19\xc6\x14\xa6\xea\x1a\xc6\xa3\xb5\x10\xdc\xd7\x2c\xc5\x16\x95\x49\x05\xe9\xfe\xf9\x08\xd4\x5e\x13\x00\x6a\xdf\x27\xd4\x67\xa7\xd8\x3c\x11\x1d\x1a\x5d\xf1\x5e\xf2\x93\x77\x1a\xef\xb9\x20\x03\x2a\x5b\xb9\x89\xf8\xe4\xf5\xe1\xb0\x50\x93\xd3\xf1\x30\xf9\x84\xc0\x7a\x77\x2a\x36\x83\xf4\xdc\x6f\xb2\x8a\x96\x81\x5b\x32\x12\x3c\xcd\xd1\x39\x54\xf1\x9d\x5b\x8b\x24\xa1\x03\xe7\x71\xa3\x4c\x32\x87\x55\xc6\x5e\xd6\x4e\x19\x24\xff\xd0\x4d\x30\xb2\x14\x2c\xc2\x62\xf6\xe0\x04\x8f\xef\x6d\xbc\x65\x2f\x21\x47\x9e\xa1\xc4\xb1\xd6\x6d\x28\xf4\xd4\x6e\xf7\x18\x5e\x39\x0c\xbf\xa2\xe0\x23\x80\x58\x2f\x31\x88\xbb\x94\xeb\xbf\x05\xd3\x14\x87\xa0\x9a\xff\x01\xfc\xbb\x4c\xd4\xbf\xd1\xf0\xa8\x33\xb3\x8c\x11\x81\x3c\x84\x36\x0b\xb5\x3c\x7d\x44\x81\x03\x1c\x40\xba\xd8\x71\x3b\xb6\xb8\x35\xcb\x08\x09\x8e\xd1\x5b\xa3\x1e\xe4\xba\x72\x8a\x8c\x8e\x10\xf7\x29\x4e\x1b\x41\x63\xb7\xae\xe5\x72\x77\xbf\xd8\x81\xa6\xf9\xd4\x3e\x02\xc6\x92\x5a\xa3\xa0\x43\xfb\x7f\xb7\x8d'
-    RSA_EXPONENT: str = '0x260445'
-    RSA_PRIVATE_EXPONENT: bytes = b'\x09\x97\x63\x4c\x47\x7c\x1a\x03\x9d\x44\xc8\x10\xb2\xaa\xa3\xc7\x86\x2b\x0b\x88\xd3\x70\x82\x72\xe1\xe1\x5f\x66\xfc\x93\x89\x70\x9f\x8a\x11\xf3\xea\x6a\x5a\xf7\xef\xfa\x2d\x01\xc1\x89\xc5\x0f\x0d\x5b\xcb\xe3\xfa\x27\x2e\x56\xcf\xc4\xa4\xe1\xd3\x88\xa9\xdc\xd6\x5d\xf8\x62\x89\x02\x55\x6c\x8b\x6b\xb6\xa6\x41\x70\x9b\x5a\x35\xdd\x26\x22\xc7\x3d\x46\x40\xbf\xa1\x35\x9d\x0e\x76\xe1\xf2\x19\xf8\xe3\x3e\xb9\xbd\x0b\x59\xec\x19\x8e\xb2\xfc\xca\xae\x03\x46\xbd\x8b\x40\x1e\x12\xe3\xc6\x7c\xb6\x29\x56\x9c\x18\x5a\x2e\x0f\x35\xa2\xf7\x41\x64\x4c\x1c\xca\x5e\xbb\x13\x9d\x77\xa8\x9a\x29\x53\xfc\x5e\x30\x04\x8c\x0e\x61\x9f\x07\xc8\xd2\x1d\x1e\x56\xb8\xaf\x07\x19\x3d\x0f\xdf\x3f\x49\xcd\x49\xf2\xef\x31\x38\xb5\x13\x88\x62\xf1\x47\x0b\xd2\xd1\x6e\x34\xa2\xb9\xe7\x77\x7a\x6c\x8c\x8d\x4c\xb9\x4b\x4e\x8b\x5d\x61\x6c\xd5\x39\x37\x53\xe7\xb0\xf3\x1c\xc7\xda\x55\x9b\xa8\xe9\x8d\x88\x89\x14\xe3\x34\x77\x3b\xaf\x49\x8a\xd8\x8d\x96\x31\xeb\x5f\xe3\x2e\x53\xa4\x14\x5b\xf0\xba\x54\x8b\xf2\xb0\xa5\x0c\x63\xf6\x7b\x14\xe3\x98\xa3\x4b\x0d'
+    RSA_KEYSIZE: Optional[int] = None
+    RSA_MODULUS: Optional[bytes] = None
+    RSA_EXPONENT: Optional[str] = None
+    RSA_PRIVATE_EXPONENT: Optional[bytes] = None
     
     # SM4 parameters
-    SM4_KEY: bytes = b'\x01\x23\x45\x67\x89\xab\xcd\xef\xfe\xdc\xba\x98\x76\x54\x32\x10'
-    SM4_IV: bytes = b'\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f'
+    SM4_KEY: Optional[bytes] = None
+    SM4_IV: Optional[bytes] = None
     
     # SM2 parameters
-    SM2_PRIVATE_KEY: bytes = b'\x39\x45\x20\x8f\x7b\x21\x44\xb1\x3f\x36\xe3\x8a\xc6\xd3\x9f\x95\x88\x93\x93\x69\x28\x60\xb5\x1a\x42\xfb\x81\xef\x4d\xf7\xc5\xb8'
-    SM2_PUBLIC_KEY_X: bytes = b'\x09\xf9\xdf\x31\x1e\x54\x21\xa1\x50\xdd\x7d\x16\x1e\x4b\xc5\xc6\x72\x17\x9f\xad\x18\x33\xfc\x07\x6b\xb0\x8f\xf3\x56\xf3\x50\x20'
-    SM2_PUBLIC_KEY_Y: bytes = b'\xcc\xea\x49\x0c\xe2\x67\x75\xa5\x2d\xc6\xea\x71\x8c\xc1\xaa\x60\x0a\xed\x05\xfb\xf3\x5e\x08\x4a\x66\x32\xf6\x07\x2d\xa9\xad\x13'
-    SM2_RANDOM_K: bytes = b'\x59\x27\x6e\x27\xd5\x06\x86\x1a\x16\x68\x0f\x3a\xd9\xc0\x2d\xcc\xef\x3c\xc1\xfa\x3c\xdb\xe4\xce\x6d\x54\xb8\x0d\xea\xc1\xbc\x21'
-    SM2_ID: bytes = b'1234567812345678'
+    SM2_PRIVATE_KEY: Optional[bytes] = None
+    SM2_PUBLIC_KEY_X: Optional[bytes] = None
+    SM2_PUBLIC_KEY_Y: Optional[bytes] = None
+    SM2_RANDOM_K: Optional[bytes] = None
+    SM2_ID: Optional[bytes] = None
     
     @classmethod
-    def from_file(cls, config_path: str) -> 'FirmwareConfig':
+    def from_file(cls, config_path: str, section_name: Optional[str] = None) -> 'FirmwareConfig':
         """Create FirmwareConfig from JSON file
         
         Args:
@@ -153,12 +427,10 @@ class FirmwareConfig:
         Returns:
             FirmwareConfig instance with values from file
         """
-        config_data = load_config_from_file(config_path)
+        config_data = select_stage_config(load_config_from_file(config_path), config_path, section_name)
         
-        # Create default config first
         config = cls()
-        
-        # Override with values from file
+
         if 'firmware' in config_data:
             firmware_config = config_data['firmware']
             if 'version_bytes' in firmware_config:
@@ -166,46 +438,173 @@ class FirmwareConfig:
         
         if 'aes' in config_data:
             aes_config = config_data['aes']
-            if 'iv' in aes_config:
-                config.AES_IV = hex_string_to_bytes(aes_config['iv'])
-            if 'key' in aes_config:
-                config.AES_KEY = hex_string_to_bytes(aes_config['key'])
-            if 'auth_data' in aes_config:
-                config.AES_AUTH_DATA = hex_string_to_bytes(aes_config['auth_data'])
+            config.AES_IV = parse_optional_bytes(aes_config, 'aes', 'iv', default=None)
+            config.AES_KEY = parse_optional_bytes(aes_config, 'aes', 'key', default=None)
+            auth_data = parse_optional_bytes(aes_config, 'aes', 'auth_data', default=b'')
+            config.AES_AUTH_DATA = auth_data if auth_data is not None else b''
         
         if 'rsa' in config_data:
             rsa_config = config_data['rsa']
-            if 'key_size' in rsa_config:
-                config.RSA_KEYSIZE = int(rsa_config['key_size'])
-            if 'modulus' in rsa_config:
-                config.RSA_MODULUS = hex_string_to_bytes(rsa_config['modulus'])
+            config.RSA_KEYSIZE = parse_optional_int(rsa_config, 'rsa', 'key_size')
+            config.RSA_MODULUS = parse_optional_bytes(rsa_config, 'rsa', 'modulus', default=None)
             if 'exponent' in rsa_config:
                 config.RSA_EXPONENT = str(rsa_config['exponent'])
-            if 'private_exponent' in rsa_config:
-                config.RSA_PRIVATE_EXPONENT = hex_string_to_bytes(rsa_config['private_exponent'])
+            config.RSA_PRIVATE_EXPONENT = parse_optional_bytes(rsa_config, 'rsa', 'private_exponent', default=None)
+            apply_rsa_key_material_from_file(config, rsa_config, config_path)
         
         if 'sm4' in config_data:
             sm4_config = config_data['sm4']
-            if 'key' in sm4_config:
-                config.SM4_KEY = hex_string_to_bytes(sm4_config['key'])
-            if 'iv' in sm4_config:
-                config.SM4_IV = hex_string_to_bytes(sm4_config['iv'])
+            config.SM4_KEY = parse_optional_bytes(sm4_config, 'sm4', 'key', default=None)
+            config.SM4_IV = parse_optional_bytes(sm4_config, 'sm4', 'iv', default=None)
         
         if 'sm2' in config_data:
             sm2_config = config_data['sm2']
-            if 'private_key' in sm2_config:
-                config.SM2_PRIVATE_KEY = hex_string_to_bytes(sm2_config['private_key'])
-            if 'public_key_x' in sm2_config:
-                config.SM2_PUBLIC_KEY_X = hex_string_to_bytes(sm2_config['public_key_x'])
-            if 'public_key_y' in sm2_config:
-                config.SM2_PUBLIC_KEY_Y = hex_string_to_bytes(sm2_config['public_key_y'])
-            if 'random_k' in sm2_config:
-                config.SM2_RANDOM_K = hex_string_to_bytes(sm2_config['random_k'])
+            config.SM2_PRIVATE_KEY = parse_optional_bytes(sm2_config, 'sm2', 'private_key', default=None)
+            config.SM2_PUBLIC_KEY_X = parse_optional_bytes(sm2_config, 'sm2', 'public_key_x', default=None)
+            config.SM2_PUBLIC_KEY_Y = parse_optional_bytes(sm2_config, 'sm2', 'public_key_y', default=None)
+            config.SM2_RANDOM_K = parse_optional_bytes(sm2_config, 'sm2', 'random_k', default=None)
             if 'id' in sm2_config:
-                config.SM2_ID = sm2_config['id'].encode('utf-8') if isinstance(sm2_config['id'], str) else hex_string_to_bytes(sm2_config['id'])
+                config.SM2_ID = parse_required_string_or_hex(sm2_config, 'sm2', 'id')
         
         logging.info("Configuration loaded and applied successfully")
         return config
+
+    @classmethod
+    def from_file_for_encryption(
+        cls,
+        config_path: str,
+        encryption_type: int,
+        section_name: Optional[str] = None,
+    ) -> 'FirmwareConfig':
+        return cls.from_file_for_encryption_with_iv_policy(
+            config_path,
+            encryption_type,
+            use_rom_iv=False,
+            section_name=section_name,
+        )
+
+    @classmethod
+    def from_file_for_encryption_with_iv_policy(
+        cls,
+        config_path: str,
+        encryption_type: int,
+        use_rom_iv: bool,
+        section_name: Optional[str] = None,
+    ) -> 'FirmwareConfig':
+        config_data = select_stage_config(load_config_from_file(config_path), config_path, section_name)
+        config = cls()
+
+        if 'firmware' in config_data:
+            firmware_config = require_dict(config_data, 'firmware')
+            if 'version_bytes' in firmware_config:
+                config.VERSION_BYTES = parse_optional_bytes(firmware_config, 'firmware', 'version_bytes')
+
+        if encryption_type == cls.ENCRYPTION_AES:
+            aes_config = require_dict(config_data, 'aes')
+            rsa_config = require_dict(config_data, 'rsa')
+            config.AES_USE_EMBEDDED_IV = not use_rom_iv
+
+            if use_rom_iv:
+                config.AES_IV = resolve_stage_iv_with_rom_policy(
+                    aes_config,
+                    'aes',
+                    'iv',
+                    ROM_AES_IV,
+                    use_rom_iv,
+                    section_name,
+                )
+            else:
+                config.AES_IV = parse_optional_bytes(aes_config, 'aes', 'iv', default=None)
+            config.AES_KEY = parse_required_bytes(aes_config, 'aes', 'key')
+            auth_data = parse_optional_bytes(aes_config, 'aes', 'auth_data', default=b'')
+            config.AES_AUTH_DATA = auth_data if auth_data is not None else b''
+
+            config.RSA_KEYSIZE = parse_optional_int(rsa_config, 'rsa', 'key_size')
+            config.RSA_MODULUS = parse_optional_bytes(rsa_config, 'rsa', 'modulus', default=None)
+            rsa_exponent_value = parse_optional_int(rsa_config, 'rsa', 'exponent')
+            if rsa_exponent_value is not None:
+                if rsa_exponent_value <= 0 or rsa_exponent_value > 0xffffffff:
+                    raise ValueError("Field 'rsa.exponent' must be in range 1..0xffffffff")
+                config.RSA_EXPONENT = hex(rsa_exponent_value)
+            config.RSA_PRIVATE_EXPONENT = parse_optional_bytes(rsa_config, 'rsa', 'private_exponent', default=None)
+            apply_rsa_key_material_from_file(config, rsa_config, config_path)
+
+        elif encryption_type == cls.ENCRYPTION_SM4:
+            sm4_config = require_dict(config_data, 'sm4')
+            sm2_config = require_dict(config_data, 'sm2')
+
+            config.SM4_KEY = parse_required_bytes(sm4_config, 'sm4', 'key')
+            config.SM4_IV = resolve_stage_iv_with_rom_policy(
+                sm4_config,
+                'sm4',
+                'iv',
+                ROM_SM4_IV,
+                use_rom_iv,
+                section_name,
+            )
+
+            config.SM2_PRIVATE_KEY = parse_required_bytes(sm2_config, 'sm2', 'private_key')
+            config.SM2_PUBLIC_KEY_X = parse_required_bytes(sm2_config, 'sm2', 'public_key_x')
+            config.SM2_PUBLIC_KEY_Y = parse_required_bytes(sm2_config, 'sm2', 'public_key_y')
+            config.SM2_RANDOM_K = parse_optional_bytes(sm2_config, 'sm2', 'random_k', default=None)
+            config.SM2_ID = parse_required_string_or_hex(sm2_config, 'sm2', 'id')
+
+        config.validate_for_encryption(encryption_type)
+        logging.info("Configuration loaded and validated successfully")
+        return config
+
+    def validate_for_encryption(self, encryption_type: int) -> None:
+        validate_exact_length('firmware.version_bytes', self.VERSION_BYTES, 4)
+
+        if encryption_type == self.ENCRYPTION_NONE:
+            return
+
+        if encryption_type == self.ENCRYPTION_AES:
+            if self.AES_IV is None and not self.AES_USE_EMBEDDED_IV:
+                raise ValueError("Missing required field 'aes.iv'")
+            if self.AES_KEY is None:
+                raise ValueError("Missing required field 'aes.key'")
+            if self.RSA_KEYSIZE is None:
+                raise ValueError("Missing required field 'rsa.key_size'")
+            if self.RSA_MODULUS is None:
+                raise ValueError("Missing required field 'rsa.modulus'")
+            if self.RSA_EXPONENT is None:
+                raise ValueError("Missing required field 'rsa.exponent'")
+            if self.RSA_PRIVATE_EXPONENT is None:
+                raise ValueError("Missing required field 'rsa.private_exponent'")
+
+            if self.AES_IV is not None:
+                validate_exact_length('aes.iv', self.AES_IV, AES_GCM_IV_LEN)
+            validate_exact_length('aes.key', self.AES_KEY, 32)
+            validate_exact_length('rsa.modulus', self.RSA_MODULUS, 256)
+            validate_exact_length('rsa.private_exponent', self.RSA_PRIVATE_EXPONENT, 256)
+
+            rsa_exponent = int(self.RSA_EXPONENT, 0)
+            if rsa_exponent <= 0 or rsa_exponent > 0xffffffff:
+                raise ValueError("Field 'rsa.exponent' must be in range 1..0xffffffff")
+
+        elif encryption_type == self.ENCRYPTION_SM4:
+            if self.SM4_KEY is None:
+                raise ValueError("Missing required field 'sm4.key'")
+            if self.SM4_IV is None:
+                raise ValueError("Missing required field 'sm4.iv'")
+            if self.SM2_PRIVATE_KEY is None:
+                raise ValueError("Missing required field 'sm2.private_key'")
+            if self.SM2_PUBLIC_KEY_X is None:
+                raise ValueError("Missing required field 'sm2.public_key_x'")
+            if self.SM2_PUBLIC_KEY_Y is None:
+                raise ValueError("Missing required field 'sm2.public_key_y'")
+            if self.SM2_ID is None:
+                raise ValueError("Missing required field 'sm2.id'")
+
+            validate_exact_length('sm4.key', self.SM4_KEY, 16)
+            validate_exact_length('sm4.iv', self.SM4_IV, 16)
+            validate_exact_length('sm2.private_key', self.SM2_PRIVATE_KEY, 32)
+            validate_exact_length('sm2.public_key_x', self.SM2_PUBLIC_KEY_X, 32)
+            validate_exact_length('sm2.public_key_y', self.SM2_PUBLIC_KEY_Y, 32)
+            if self.SM2_RANDOM_K is not None:
+                validate_exact_length('sm2.random_k', self.SM2_RANDOM_K, 32)
+            validate_max_length('sm2.id', self.SM2_ID, 512 - 32 * 4)
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary for JSON serialization
@@ -218,26 +617,25 @@ class FirmwareConfig:
                 'version_bytes': bytes_to_hex_string(self.VERSION_BYTES),
             },
             'aes': {
-                'iv': bytes_to_hex_string(self.AES_IV),
-                'key': bytes_to_hex_string(self.AES_KEY),
+                'iv': optional_bytes_to_hex_string(self.AES_IV),
+                'key': optional_bytes_to_hex_string(self.AES_KEY),
                 'auth_data': bytes_to_hex_string(self.AES_AUTH_DATA)
             },
             'rsa': {
-                'key_size': self.RSA_KEYSIZE,
-                'modulus': bytes_to_hex_string(self.RSA_MODULUS),
-                'exponent': self.RSA_EXPONENT,
-                'private_exponent': bytes_to_hex_string(self.RSA_PRIVATE_EXPONENT)
+                'key_size': self.RSA_KEYSIZE if self.RSA_KEYSIZE is not None else 2048,
+                'modulus': optional_bytes_to_hex_string(self.RSA_MODULUS),
+                'exponent': self.RSA_EXPONENT if self.RSA_EXPONENT is not None else '',
+                'private_exponent': optional_bytes_to_hex_string(self.RSA_PRIVATE_EXPONENT)
             },
             'sm4': {
-                'key': bytes_to_hex_string(self.SM4_KEY),
-                'iv': bytes_to_hex_string(self.SM4_IV)
+                'key': optional_bytes_to_hex_string(self.SM4_KEY),
+                'iv': optional_bytes_to_hex_string(self.SM4_IV)
             },
             'sm2': {
-                'private_key': bytes_to_hex_string(self.SM2_PRIVATE_KEY),
-                'public_key_x': bytes_to_hex_string(self.SM2_PUBLIC_KEY_X),
-                'public_key_y': bytes_to_hex_string(self.SM2_PUBLIC_KEY_Y),
-                'random_k': bytes_to_hex_string(self.SM2_RANDOM_K),
-                'id': self.SM2_ID.decode('utf-8', errors='ignore')
+                'private_key': optional_bytes_to_hex_string(self.SM2_PRIVATE_KEY),
+                'public_key_x': optional_bytes_to_hex_string(self.SM2_PUBLIC_KEY_X),
+                'public_key_y': optional_bytes_to_hex_string(self.SM2_PUBLIC_KEY_Y),
+                'id': self.SM2_ID.decode('utf-8', errors='ignore') if self.SM2_ID is not None else ''
             }
         }
 
@@ -277,6 +675,17 @@ def zeros(count: int) -> bytes:
     return b'\x00' * count
 
 
+def generate_sm2_nonce_hex(sm2_crypt: sm2.CryptSM2) -> str:
+    curve_order = int(sm2_crypt.ecc_table['n'], 16)
+    nonce = secrets.randbelow(curve_order - 1) + 1
+
+    return f"{nonce:0{sm2_crypt.para_len}x}"
+
+
+def generate_aes_gcm_iv() -> bytes:
+    return secrets.token_bytes(AES_GCM_IV_LEN)
+
+
 # ============================================================================
 # Encryption Classes
 # ============================================================================
@@ -287,19 +696,30 @@ class AESEncryption:
     def __init__(self, config: FirmwareConfig):
         self.config = config
         self.key = config.AES_KEY
-        self.iv = config.AES_IV
         self.auth_data = config.AES_AUTH_DATA
+
+    def _resolve_iv(self) -> bytes:
+        if self.config.AES_USE_EMBEDDED_IV:
+            if self.config.AES_IV is not None:
+                logging.warning("Ignoring configured aes.iv and generating a fresh AES-GCM IV per image")
+            return generate_aes_gcm_iv()
+
+        if self.config.AES_IV is None:
+            raise ValueError("AES IV is not configured")
+
+        return self.config.AES_IV
         
-    def encrypt(self, data: bytes) -> Tuple[bytes, bytes]:
+    def encrypt(self, data: bytes) -> Tuple[bytes, bytes, bytes]:
         """Encrypt data using AES-GCM-256
         
         Args:
             data: Data to encrypt
             
         Returns:
-            Tuple of (ciphertext, authentication_tag)
+            Tuple of (iv, ciphertext, authentication_tag)
         """
-        cipher = AES.new(self.key, AES.MODE_GCM, self.iv)
+        iv = self._resolve_iv()
+        cipher = AES.new(self.key, AES.MODE_GCM, nonce=iv)
         cipher.update(self.auth_data)
         ciphertext, tag = cipher.encrypt_and_digest(data)
         
@@ -307,7 +727,7 @@ class AESEncryption:
         logging.debug(f"Ciphertext: {format_hex_bytes(ciphertext, 'ciphertext: ')}")
         logging.debug(f"Tag: {format_hex_bytes(tag, 'tag: ')}")
         
-        return ciphertext, tag
+        return iv, ciphertext, tag
     
     def decrypt(self, ciphertext: bytes, tag: bytes) -> bytes:
         """Decrypt data using AES-GCM-256
@@ -319,7 +739,10 @@ class AESEncryption:
         Returns:
             Decrypted plaintext
         """
-        cipher = AES.new(self.key, AES.MODE_GCM, self.iv)
+        if self.config.AES_IV is None:
+            raise ValueError("AES IV is not configured")
+
+        cipher = AES.new(self.key, AES.MODE_GCM, nonce=self.config.AES_IV)
         cipher.update(self.auth_data)
         plaintext = cipher.decrypt_and_verify(ciphertext, tag)
         
@@ -382,6 +805,9 @@ class RSASignature:
         
     def _setup_keys(self) -> None:
         """Setup RSA keys from configuration"""
+        if self.config.RSA_MODULUS is None or self.config.RSA_EXPONENT is None or self.config.RSA_PRIVATE_EXPONENT is None:
+            raise ValueError("RSA configuration is incomplete")
+
         modulus_hex = bytes.hex(self.config.RSA_MODULUS)
         self.modulus = int(modulus_hex, 16)
         self.exponent = int(self.config.RSA_EXPONENT, 16)
@@ -443,7 +869,6 @@ class SM2Signature:
         self.public_key = self.config.SM2_PUBLIC_KEY_X + self.config.SM2_PUBLIC_KEY_Y
         self.public_key_hex = codecs.encode(self.public_key, 'hex').decode('ascii')
         self.id_hex = codecs.encode(self.config.SM2_ID, 'hex').decode('ascii')
-        self.random_k_hex = codecs.encode(self.config.SM2_RANDOM_K, 'hex').decode('ascii')
         
     def sign(self, data: bytes) -> Tuple[bytes, bytes, bytes]:
         """Sign data using SM2
@@ -458,6 +883,9 @@ class SM2Signature:
             public_key=self.public_key_hex, 
             private_key=self.private_key_hex
         )
+
+        if self.config.SM2_RANDOM_K is not None:
+            logging.warning("Ignoring configured sm2.random_k and generating a fresh SM2 nonce from a CSPRNG")
         
         # Calculate Z value for SM2
         z = ('0080' + self.id_hex + sm2_crypt.ecc_table['a'] + 
@@ -472,7 +900,7 @@ class SM2Signature:
         sign_data = binascii.a2b_hex(e.encode('utf-8'))
         
         # Generate signature
-        sign = sm2_crypt.sign(sign_data, self.random_k_hex)
+        sign = sm2_crypt.sign(sign_data, generate_sm2_nonce_hex(sm2_crypt))
         r = sign[0:sm2_crypt.para_len]
         s = sign[sm2_crypt.para_len:]
         
@@ -547,12 +975,14 @@ class RSAHeaderFormatter(HeaderFormatter):
             signature: RSA signature
         """
         # Write modulus (2048 bits)
-        modulus_hex = f'{modulus:x}'
-        modulus_bytes = bytes.fromhex(modulus_hex)
+        if self.config.RSA_MODULUS is None or self.config.RSA_EXPONENT is None:
+            raise ValueError("RSA configuration is incomplete")
+
+        modulus_bytes = self.config.RSA_MODULUS
         output_file.write(modulus_bytes)
         
         # Write exponent (4 bytes)
-        exponent_bytes = exponent.to_bytes(4, byteorder=sys.byteorder, signed=True)
+        exponent_bytes = int(self.config.RSA_EXPONENT, 0).to_bytes(4, byteorder=sys.byteorder, signed=True)
         output_file.write(exponent_bytes)
         
         # Write signature
@@ -576,6 +1006,9 @@ class SM2HeaderFormatter(HeaderFormatter):
             s_component: SM2 S component
         """
         # Write ID length
+        if self.config.SM2_ID is None or self.config.SM2_PUBLIC_KEY_X is None or self.config.SM2_PUBLIC_KEY_Y is None:
+            raise ValueError("SM2 configuration is incomplete")
+
         id_len = len(self.config.SM2_ID)
         id_len_bytes = id_len.to_bytes(4, byteorder=sys.byteorder, signed=True)
         output_file.write(id_len_bytes)
@@ -714,8 +1147,11 @@ class FirmwareGenerator:
         
         # Encrypt with AES-GCM
         aes = AESEncryption(self.config)
-        ciphertext, tag = aes.encrypt(data)
-        encrypted_data = ciphertext + tag
+        iv, ciphertext, tag = aes.encrypt(data)
+        if self.config.AES_USE_EMBEDDED_IV:
+            encrypted_data = iv + ciphertext + tag
+        else:
+            encrypted_data = ciphertext + tag
         
         # Sign tag with RSA
         rsa = RSASignature(self.config)
@@ -809,7 +1245,7 @@ Examples:
     
     parser.add_argument(
         '-c', '--config',
-        help='Path to configuration JSON file (optional, uses defaults if not provided)'
+        help='Path to configuration JSON file; required for encrypted modes and optional for no-encryption mode'
     )
     
     encryption_group = parser.add_mutually_exclusive_group()
@@ -867,24 +1303,32 @@ def main() -> None:
         if not args.input or not args.output:
             parser.error("Input and output files are required for firmware generation")
         
-        # Load configuration from file if provided
-        if args.config:
-            config = FirmwareConfig.from_file(args.config)
-        else:
-            config = FirmwareConfig()
-            logging.info("Using default configuration")
-        
         # Determine encryption type
         if args.aes:
-            encryption_type = config.ENCRYPTION_AES
+            encryption_type = FirmwareConfig.ENCRYPTION_AES
         elif args.sm4:
-            encryption_type = config.ENCRYPTION_SM4
+            encryption_type = FirmwareConfig.ENCRYPTION_SM4
         elif args.no_encryption:
-            encryption_type = config.ENCRYPTION_NONE
+            encryption_type = FirmwareConfig.ENCRYPTION_NONE
         else:
             # Default to no encryption if none specified
-            encryption_type = config.ENCRYPTION_NONE
+            encryption_type = FirmwareConfig.ENCRYPTION_NONE
             logging.info("No encryption type specified, using no encryption")
+
+        # Load configuration from file if provided
+        if args.config:
+            if encryption_type == FirmwareConfig.ENCRYPTION_NONE:
+                config = FirmwareConfig.from_file(args.config)
+                config.validate_for_encryption(encryption_type)
+            else:
+                config = FirmwareConfig.from_file_for_encryption(args.config, encryption_type)
+        else:
+            if encryption_type != FirmwareConfig.ENCRYPTION_NONE:
+                parser.error("Encrypted modes require --config with user-provided key and IV material")
+
+            config = FirmwareConfig()
+            config.validate_for_encryption(encryption_type)
+            logging.info("Using default no-encryption configuration")
 
         # Generate firmware
         generator = FirmwareGenerator(config)

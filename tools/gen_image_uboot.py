@@ -49,9 +49,26 @@ def generate_uboot_spl_bin(spl_path):
         print(f"U-Boot SPL Binary ({spl_path}) not exists")
         sys.exit(1)
 
+    try:
+        spl_secure_boot_type, spl_secure_boot_config = image_tools.resolve_secure_boot_stage_settings(
+            kconfig,
+            "CONFIG_SECURE_BOOT_SPL_ENABLE",
+            "CONFIG_SECURE_BOOT_SPL_TYPE",
+        )
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        sys.exit(1)
+
     uboot_spl_output_file = Path(uboot_generate_images_dir) / "fn_u-boot-spl.bin"
 
-    if not image_tools.generate_k230_image(spl_path, uboot_spl_output_file):
+    if not image_tools.generate_k230_image(
+        spl_path,
+        uboot_spl_output_file,
+        spl_secure_boot_type,
+        spl_secure_boot_config,
+        use_rom_iv=True,
+        config_stage="spl",
+    ):
         print("U-Boot generate SPL image failed")
         sys.exit(1)
 
@@ -65,16 +82,8 @@ def generate_uboot_bin(uboot_path):
         print(f"UBOOT Binary ({uboot_path}) not exists")
         sys.exit(1)
 
-    uboot_enable_secure_boot = False
-    uboot_secure_boot_type = None
-    uboot_secure_boot_config = None
-
     try:
-        uboot_enable_secure_boot = bool(kconfig["CONFIG_UBOOT_ENABLE_SECURE_BOOT"])
-        if uboot_enable_secure_boot:
-            uboot_secure_boot_type = int(kconfig["CONFIG_UBOOT_SECURE_BOOT_TYPE"])
-            if uboot_secure_boot_type != 0:
-                uboot_secure_boot_config = str(kconfig["CONFIG_UBOOT_SECURE_BOOT_CONFIG_FILE"])
+        uboot_secure_boot_type, uboot_secure_boot_config = image_tools.resolve_downstream_secure_boot_settings(kconfig)
     except Exception as e:
         print(f"An error occurred: {e}")
         sys.exit(1)
@@ -93,7 +102,13 @@ def generate_uboot_bin(uboot_path):
 
     uboot_output_file = Path(uboot_generate_images_dir) / "fn_ug_u-boot.bin"
 
-    if not image_tools.generate_k230_image(uboot_image_file, uboot_output_file, uboot_secure_boot_type, uboot_secure_boot_config):
+    if not image_tools.generate_k230_image(
+        uboot_image_file,
+        uboot_output_file,
+        uboot_secure_boot_type,
+        uboot_secure_boot_config,
+        config_stage="firmware",
+    ):
         print("U-Boot generate image failed")
         sys.exit(1)
     os.remove(uboot_image_file)

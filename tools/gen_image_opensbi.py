@@ -126,6 +126,12 @@ def generate_opensbi_rtsmart(opensbi_jump_path, rtsmart_kernel_path):
         print(f"opensbi_jump_path {opensbi_jump_path} or rtsmart_kernel_path {rtsmart_kernel_path} not exist")
         sys.exit(1)
 
+    try:
+        secure_boot_type, secure_boot_config = image_tools.resolve_downstream_secure_boot_settings(kconfig)
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        sys.exit(1)
+
     opensbi_jump_addr = get_opensbi_jump_addr()
     membase_addr = image_tools.safe_str_to_int(kconfig["CONFIG_MEM_BASE_ADDR"])
 
@@ -157,7 +163,13 @@ def generate_opensbi_rtsmart(opensbi_jump_path, rtsmart_kernel_path):
 
     opensbi_rtsmart_output_file = Path(opensbi_generate_images_dir) / "opensbi_rtt_system.bin"
 
-    if not image_tools.generate_k230_image(opensbi_jump_rtsmart_image_file, opensbi_rtsmart_output_file):
+    if not image_tools.generate_k230_image(
+        opensbi_jump_rtsmart_image_file,
+        opensbi_rtsmart_output_file,
+        secure_boot_type,
+        secure_boot_config,
+        config_stage="firmware",
+    ):
         print("OpenSBI + RTSmart generate image failed")
         sys.exit(1)
     os.remove(opensbi_jump_rtsmart_image_file)

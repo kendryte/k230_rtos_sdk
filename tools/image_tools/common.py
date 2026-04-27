@@ -45,7 +45,14 @@ def generate_temp_file_path(prefix, suffix) -> str:
 
     return str(random_path)
 
-def generate_k230_image(input_file, output_file, encrypt_type = 0, encrypt_config = None) -> bool:
+def generate_k230_image(
+    input_file,
+    output_file,
+    encrypt_type = 0,
+    encrypt_config = None,
+    use_rom_iv = False,
+    config_stage = None,
+) -> bool:
     if not Path(input_file).exists():
         print(f"File not exists {input_file}")
         return False
@@ -59,9 +66,15 @@ def generate_k230_image(input_file, output_file, encrypt_type = 0, encrypt_confi
             return False
 
     if encrypt_type != 0 and encrypt_config is not None:
-        img_config = FirmwareConfig.from_file(encrypt_config)
+        img_config = FirmwareConfig.from_file_for_encryption_with_iv_policy(
+            encrypt_config,
+            encrypt_type,
+            use_rom_iv=use_rom_iv,
+            section_name=config_stage,
+        )
     else:
         img_config = FirmwareConfig()
+        img_config.validate_for_encryption(encrypt_type)
 
     try:
         img_generator = FirmwareGenerator(img_config)
@@ -71,6 +84,77 @@ def generate_k230_image(input_file, output_file, encrypt_type = 0, encrypt_confi
     except Exception as e:
         print(f"An error occurred: {e}")
         return False
+
+
+def resolve_config_path(config_path: str) -> str:
+    candidate = Path(config_path).expanduser()
+
+    if candidate.is_absolute():
+        resolved = candidate
+        if not resolved.exists():
+            raise ValueError(f"Config file not exists {resolved}")
+        return str(resolved)
+
+    search_roots = []
+
+    for env_var in ("SDK_BOARD_DIR", "SDK_SRC_ROOT_DIR"):
+        try:
+            search_roots.append(Path(get_validated_env_path(env_var)))
+        except ValueError:
+            pass
+
+    search_roots.append(Path.cwd())
+
+    for root in search_roots:
+        resolved = root / candidate
+        if resolved.exists():
+            return str(resolved.resolve())
+
+    raise ValueError(f"Config file not exists {config_path}")
+
+
+def resolve_shared_secure_boot_config_path(kconfig: Dict[str, Any]) -> str:
+    config_value = kconfig.get("CONFIG_SECURE_BOOT_CONFIG_FILE")
+    if config_value:
+        return resolve_config_path(str(config_value))
+
+    raise ValueError("Missing shared secure-boot config path")
+
+
+def resolve_secure_boot_stage_settings(
+    kconfig: Dict[str, Any],
+    enable_key: str,
+    type_key: str,
+) -> tuple[int, str | None]:
+    secure_boot_enabled = bool(kconfig.get(enable_key, False))
+    if not secure_boot_enabled:
+        return 0, None
+
+    secure_boot_type = int(kconfig.get(type_key, 0))
+    if secure_boot_type == 0:
+        return 0, None
+
+    return secure_boot_type, resolve_shared_secure_boot_config_path(kconfig)
+
+
+def resolve_downstream_secure_boot_settings(kconfig: Dict[str, Any]) -> tuple[int, str | None]:
+    return resolve_secure_boot_stage_settings(
+        kconfig,
+        "CONFIG_SECURE_BOOT_FIRMWARE_ENABLE",
+        "CONFIG_SECURE_BOOT_FIRMWARE_TYPE",
+    )
+
+
+def get_optional_env_path(env_var_name: str) -> str | None:
+    path_value = os.getenv(env_var_name)
+    if path_value is None:
+        return None
+
+    abs_path = os.path.abspath(path_value)
+    if not os.path.isdir(abs_path):
+        return None
+
+    return abs_path
 
 
 def get_validated_env_path(env_var_name: str) -> str:

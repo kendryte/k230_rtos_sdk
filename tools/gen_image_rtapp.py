@@ -35,6 +35,11 @@ def main():
     use_fake_rt_app = False
     delete_original_file = False
     rt_app_file_path = None
+    try:
+        secure_boot_type, secure_boot_config = image_tools.resolve_downstream_secure_boot_settings(kconfig)
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        sys.exit(1)
 
     try:
         delete_original_file = kconfig["CONFIG_FAST_BOOT_DELETE_ORIGIIN_FILE"]
@@ -76,19 +81,20 @@ def main():
     if rtapp_output_file.exists():
         os.remove(rtapp_output_file)
 
-    if not image_tools.generate_k230_image(rtapp_image_file, rtapp_output_file):
+    if not image_tools.generate_k230_image(
+        rtapp_image_file,
+        rtapp_output_file,
+        secure_boot_type,
+        secure_boot_config,
+        config_stage="firmware",
+    ):
         print("RTApp generate image failed")
         sys.exit(1)
     os.remove(rtapp_image_file)
 
     bin_preload = Path(sdk_build_images_dir) / "bin" / "preload"
-
-    if not use_fake_rt_app:
-        bin_preload.parent.mkdir(parents=True, exist_ok=True)
-        bin_preload.touch(exist_ok=True)
-    else:
-        if bin_preload.exists():
-            os.remove(bin_preload)
+    if bin_preload.exists():
+        os.remove(bin_preload)
 
     print(f"Generate RTApp Done.")
 
