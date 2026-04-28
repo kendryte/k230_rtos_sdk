@@ -4,6 +4,7 @@ import argparse
 import sys
 
 from pathlib import Path
+from typing import Tuple
 
 import image_tools
 
@@ -45,7 +46,7 @@ static const uint8_t k230_firmware_sm4_iv[] = {{
 def resolve_firmware_runtime_ivs(
     secure_boot_type: int,
     secure_config_path: Path,
-) -> tuple[bytes, bytes]:
+) -> Tuple[bytes, bytes]:
     if secure_boot_type == 0:
         return ZERO_AES_IV, ZERO_SM4_IV
 
@@ -58,7 +59,7 @@ def resolve_firmware_runtime_ivs(
     raise ValueError(f"Unsupported downstream firmware secure-boot type {secure_boot_type}")
 
 
-def resolve_runtime_ivs(config_path: Path) -> tuple[bytes, bytes]:
+def resolve_runtime_ivs(config_path: Path) -> Tuple[bytes, bytes]:
     kconfig = image_tools.parse_kconfig(str(config_path))
 
     secure_boot_type, secure_config = image_tools.resolve_downstream_secure_boot_settings(kconfig)

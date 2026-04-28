@@ -6,6 +6,7 @@ import secrets
 import sys
 
 from pathlib import Path
+from typing import Tuple
 
 from Crypto.PublicKey import RSA
 from gmssl import sm2
@@ -48,7 +49,7 @@ def generate_rsa_keypair(bits: int) -> RSA.RsaKey:
     return RSA.generate(bits)
 
 
-def write_rsa_keypair(output_dir: Path, stage: str, bits: int) -> tuple[str, str]:
+def write_rsa_keypair(output_dir: Path, stage: str, bits: int) -> Tuple[str, str]:
     key = generate_rsa_keypair(bits)
     public_path = output_dir / f"{stage}_rsa_pub.pem"
     private_path = output_dir / f"{stage}_rsa_priv.pem"
@@ -59,7 +60,7 @@ def write_rsa_keypair(output_dir: Path, stage: str, bits: int) -> tuple[str, str
     return public_path.name, private_path.name
 
 
-def generate_sm2_keypair() -> tuple[str, str, str]:
+def generate_sm2_keypair() -> Tuple[str, str, str]:
     keygen = sm2.CryptSM2(private_key="1", public_key="")
     curve_order = int(keygen.ecc_table["n"], 16)
     private_int = secrets.randbelow(curve_order - 1) + 1
