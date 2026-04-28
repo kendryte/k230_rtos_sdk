@@ -100,9 +100,7 @@ def build_sm4_sm2_stage(stage: str, version_bytes: str, sm2_id: str) -> dict:
         "key": secrets.token_hex(16),
     }
 
-    if stage == "firmware":
-        sm4_section["iv"] = secrets.token_hex(16)
-    else:
+    if stage == "spl":
         sm4_section["iv"] = ROM_SM4_IV_HEX
 
     return {

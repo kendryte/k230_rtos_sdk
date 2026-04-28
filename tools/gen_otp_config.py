@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import argparse
 import hashlib
 import json
@@ -7,6 +9,7 @@ import sys
 import zlib
 
 from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 
 from gmssl import func, sm3
 
@@ -155,7 +158,7 @@ def resolve_secure_boot_stage_config(
     kconfig: dict,
     enable_key: str,
     type_key: str,
-) -> tuple[int, str] | None:
+) -> Optional[Tuple[int, str]]:
     secure_boot_type, secure_boot_config = image_tools.resolve_secure_boot_stage_settings(
         kconfig,
         enable_key,
@@ -167,7 +170,7 @@ def resolve_secure_boot_stage_config(
     return secure_boot_type, secure_boot_config
 
 
-def lock_flag_to_word(lock_mode: str | None) -> int | None:
+def lock_flag_to_word(lock_mode: Optional[str]) -> Optional[int]:
     if lock_mode is None:
         return None
     if lock_mode == "RO":
@@ -193,12 +196,12 @@ def resolve_kdimg_board_info() -> str:
     return "secure_boot"
 
 
-def build_kdimg(parts: list[tuple[str, int, bytes]]) -> bytes:
+def build_kdimg(parts: List[Tuple[str, int, bytes]]) -> bytes:
     if not parts:
         raise ValueError("kdimg requires at least one part")
 
     next_content_offset = KDIMG_CONTENT_START_OFFSET
-    part_records: list[tuple[KdImgPart, bytes]] = []
+    part_records: List[Tuple[KdImgPart, bytes]] = []
 
     for part_name, part_offset, content in parts:
         part_content_size = len(content)
@@ -235,11 +238,11 @@ def build_kdimg(parts: list[tuple[str, int, bytes]]) -> bytes:
     return bytes(image)
 
 
-def build_otp_regions(stages: list[dict]) -> tuple[bytearray, bytearray]:
+def build_otp_regions(stages: List[dict]) -> Tuple[bytearray, bytearray]:
     otp_data = bytearray(KBURN_VALID_OTP_SIZE)
     otp_lock_region = bytearray(KBURN_VALID_OTP_SIZE)
-    written_slots: dict[int, bytes] = {}
-    lock_slots: dict[int, int] = {}
+    written_slots: Dict[int, bytes] = {}
+    lock_slots: Dict[int, int] = {}
 
     for stage in stages:
         for entry in stage["entries"]:
@@ -272,7 +275,7 @@ def build_otp_regions(stages: list[dict]) -> tuple[bytearray, bytearray]:
     return otp_data, otp_lock_region
 
 
-def resolve_default_output_dir(output_arg: str | None) -> Path:
+def resolve_default_output_dir(output_arg: Optional[str]) -> Path:
     if output_arg:
         return Path(output_arg).resolve().parent
 
@@ -287,7 +290,7 @@ def resolve_default_output_dir(output_arg: str | None) -> Path:
     return Path.cwd()
 
 
-def resolve_default_output(output_arg: str | None) -> Path:
+def resolve_default_output(output_arg: Optional[str]) -> Path:
     if output_arg:
         return Path(output_arg)
 
@@ -302,16 +305,16 @@ def resolve_default_output(output_arg: str | None) -> Path:
     return Path("otp_config.json")
 
 
-def cleanup_outputs(paths: list[Path]) -> None:
+def cleanup_outputs(paths: List[Path]) -> None:
     for path in paths:
         if path.exists():
             path.unlink()
 
 
-def resolve_stage_results(args: argparse.Namespace) -> list[dict]:
+def resolve_stage_results(args: argparse.Namespace) -> List[dict]:
     if args.config:
         kconfig = image_tools.parse_kconfig(args.config)
-        stages: list[dict] = []
+        stages: List[dict] = []
 
         spl_config = resolve_secure_boot_stage_config(
             kconfig,

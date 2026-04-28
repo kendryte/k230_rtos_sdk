@@ -377,6 +377,7 @@ def apply_rsa_key_material_from_file(
 ROM_AES_IV = b'\x9f\xf1\x85\x63\xb9\x78\xec\x28\x1b\x3f\x27\x94'
 ROM_SM4_IV = b'\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f'
 AES_GCM_IV_LEN = 12
+SM4_CBC_IV_LEN = 16
 
 @dataclass
 class FirmwareConfig:
@@ -409,6 +410,7 @@ class FirmwareConfig:
     # SM4 parameters
     SM4_KEY: Optional[bytes] = None
     SM4_IV: Optional[bytes] = None
+    SM4_USE_EMBEDDED_IV: bool = False
     
     # SM2 parameters
     SM2_PRIVATE_KEY: Optional[bytes] = None
@@ -532,16 +534,20 @@ class FirmwareConfig:
         elif encryption_type == cls.ENCRYPTION_SM4:
             sm4_config = require_dict(config_data, 'sm4')
             sm2_config = require_dict(config_data, 'sm2')
+            config.SM4_USE_EMBEDDED_IV = not use_rom_iv
 
             config.SM4_KEY = parse_required_bytes(sm4_config, 'sm4', 'key')
-            config.SM4_IV = resolve_stage_iv_with_rom_policy(
-                sm4_config,
-                'sm4',
-                'iv',
-                ROM_SM4_IV,
-                use_rom_iv,
-                section_name,
-            )
+            if use_rom_iv:
+                config.SM4_IV = resolve_stage_iv_with_rom_policy(
+                    sm4_config,
+                    'sm4',
+                    'iv',
+                    ROM_SM4_IV,
+                    use_rom_iv,
+                    section_name,
+                )
+            else:
+                config.SM4_IV = parse_optional_bytes(sm4_config, 'sm4', 'iv', default=None)
 
             config.SM2_PRIVATE_KEY = parse_required_bytes(sm2_config, 'sm2', 'private_key')
             config.SM2_PUBLIC_KEY_X = parse_required_bytes(sm2_config, 'sm2', 'public_key_x')
@@ -586,7 +592,7 @@ class FirmwareConfig:
         elif encryption_type == self.ENCRYPTION_SM4:
             if self.SM4_KEY is None:
                 raise ValueError("Missing required field 'sm4.key'")
-            if self.SM4_IV is None:
+            if self.SM4_IV is None and not self.SM4_USE_EMBEDDED_IV:
                 raise ValueError("Missing required field 'sm4.iv'")
             if self.SM2_PRIVATE_KEY is None:
                 raise ValueError("Missing required field 'sm2.private_key'")
@@ -598,7 +604,8 @@ class FirmwareConfig:
                 raise ValueError("Missing required field 'sm2.id'")
 
             validate_exact_length('sm4.key', self.SM4_KEY, 16)
-            validate_exact_length('sm4.iv', self.SM4_IV, 16)
+            if self.SM4_IV is not None:
+                validate_exact_length('sm4.iv', self.SM4_IV, SM4_CBC_IV_LEN)
             validate_exact_length('sm2.private_key', self.SM2_PRIVATE_KEY, 32)
             validate_exact_length('sm2.public_key_x', self.SM2_PUBLIC_KEY_X, 32)
             validate_exact_length('sm2.public_key_y', self.SM2_PUBLIC_KEY_Y, 32)
@@ -686,6 +693,10 @@ def generate_aes_gcm_iv() -> bytes:
     return secrets.token_bytes(AES_GCM_IV_LEN)
 
 
+def generate_sm4_cbc_iv() -> bytes:
+    return secrets.token_bytes(SM4_CBC_IV_LEN)
+
+
 # ============================================================================
 # Encryption Classes
 # ============================================================================
@@ -756,25 +767,36 @@ class SM4Encryption:
     def __init__(self, config: FirmwareConfig):
         self.config = config
         self.key = config.SM4_KEY
-        self.iv = config.SM4_IV
         self.crypt_sm4 = CryptSM4()
+
+    def _resolve_iv(self) -> bytes:
+        if self.config.SM4_USE_EMBEDDED_IV:
+            if self.config.SM4_IV is not None:
+                logging.warning("Ignoring configured sm4.iv and generating a fresh SM4-CBC IV per image")
+            return generate_sm4_cbc_iv()
+
+        if self.config.SM4_IV is None:
+            raise ValueError("SM4 IV is not configured")
+
+        return self.config.SM4_IV
         
-    def encrypt(self, data: bytes) -> bytes:
+    def encrypt(self, data: bytes) -> Tuple[bytes, bytes]:
         """Encrypt data using SM4-CBC
         
         Args:
             data: Data to encrypt
             
         Returns:
-            Encrypted data
+            Tuple of (iv, encrypted_data)
         """
+        iv = self._resolve_iv()
         self.crypt_sm4.set_key(self.key, SM4_ENCRYPT)
-        encrypted = self.crypt_sm4.crypt_cbc(self.iv, data)
+        encrypted = self.crypt_sm4.crypt_cbc(iv, data)
         
         logging.debug(f"SM4-CBC encrypted {len(data)} bytes")
         logging.debug(f"Encrypted: {format_hex_bytes(encrypted, 'encryption: ')}")
         
-        return encrypted
+        return iv, encrypted
     
     def decrypt(self, data: bytes) -> bytes:
         """Decrypt data using SM4-CBC
@@ -785,8 +807,11 @@ class SM4Encryption:
         Returns:
             Decrypted data
         """
+        if self.config.SM4_IV is None:
+            raise ValueError("SM4 IV is not configured")
+
         self.crypt_sm4.set_key(self.key, SM4_DECRYPT)
-        decrypted = self.crypt_sm4.crypt_cbc(self.iv, data)
+        decrypted = self.crypt_sm4.crypt_cbc(self.config.SM4_IV, data)
         
         logging.debug(f"SM4-CBC decrypted {len(decrypted)} bytes")
         return decrypted
@@ -1125,7 +1150,11 @@ class FirmwareGenerator:
         
         # Encrypt with SM4
         sm4 = SM4Encryption(self.config)
-        encrypted_data = sm4.encrypt(data)
+        iv, encrypted_payload = sm4.encrypt(data)
+        if self.config.SM4_USE_EMBEDDED_IV:
+            encrypted_data = iv + encrypted_payload
+        else:
+            encrypted_data = encrypted_payload
         
         # Sign with SM2
         sm2 = SM2Signature(self.config)

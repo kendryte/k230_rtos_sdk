@@ -49,20 +49,11 @@ def resolve_firmware_runtime_ivs(
     if secure_boot_type == 0:
         return ZERO_AES_IV, ZERO_SM4_IV
 
-    firmware_config = image_tools.FirmwareConfig.from_file_for_encryption_with_iv_policy(
-        str(secure_config_path),
-        secure_boot_type,
-        use_rom_iv=False,
-        section_name="firmware",
-    )
-
     if secure_boot_type == 2:
         return ZERO_AES_IV, ZERO_SM4_IV
 
     if secure_boot_type == 1:
-        if firmware_config.SM4_IV is None:
-            raise ValueError("Missing resolved SM4 IV for shared downstream firmware SM4+SM2 secure boot")
-        return ZERO_AES_IV, firmware_config.SM4_IV
+        return ZERO_AES_IV, ZERO_SM4_IV
 
     raise ValueError(f"Unsupported downstream firmware secure-boot type {secure_boot_type}")
 

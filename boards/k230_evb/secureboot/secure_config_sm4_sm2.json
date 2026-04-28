@@ -19,8 +19,7 @@
       "version_bytes": "00000000"
     },
     "sm4": {
-      "key": "0123456789abcdeffedcba9876543210",
-      "iv": "000102030405060708090a0b0c0d0e0f"
+      "key": "0123456789abcdeffedcba9876543210"
     },
     "sm2": {
       "private_key": "3945208f7b2144b13f36e38ac6d39f95889393692860b51a42fb81ef4df7c5b8",

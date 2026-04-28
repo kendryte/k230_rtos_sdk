@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import sys
 import re
@@ -5,7 +7,7 @@ import io
 import tempfile
 
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict, Optional, Tuple
 
 from .k230_image_generator import FirmwareConfig, FirmwareGenerator
 
@@ -125,7 +127,7 @@ def resolve_secure_boot_stage_settings(
     kconfig: Dict[str, Any],
     enable_key: str,
     type_key: str,
-) -> tuple[int, str | None]:
+) -> Tuple[int, Optional[str]]:
     secure_boot_enabled = bool(kconfig.get(enable_key, False))
     if not secure_boot_enabled:
         return 0, None
@@ -137,7 +139,7 @@ def resolve_secure_boot_stage_settings(
     return secure_boot_type, resolve_shared_secure_boot_config_path(kconfig)
 
 
-def resolve_downstream_secure_boot_settings(kconfig: Dict[str, Any]) -> tuple[int, str | None]:
+def resolve_downstream_secure_boot_settings(kconfig: Dict[str, Any]) -> Tuple[int, Optional[str]]:
     return resolve_secure_boot_stage_settings(
         kconfig,
         "CONFIG_SECURE_BOOT_FIRMWARE_ENABLE",
@@ -145,7 +147,7 @@ def resolve_downstream_secure_boot_settings(kconfig: Dict[str, Any]) -> tuple[in
     )
 
 
-def get_optional_env_path(env_var_name: str) -> str | None:
+def get_optional_env_path(env_var_name: str) -> Optional[str]:
     path_value = os.getenv(env_var_name)
     if path_value is None:
         return None

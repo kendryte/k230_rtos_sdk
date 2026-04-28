@@ -10,27 +10,6 @@ menu "Uboot Configuration"
         string "Uboot enviroment file"
         default "default.env"
 
-    menuconfig UBOOT_ENABLE_FAST_BOOT
-        bool "Uboot Enable FastBoot"
-
-        if UBOOT_ENABLE_FAST_BOOT
-            choice UBOOT_FAST_BOOT_TYPE
-                bool "Uboot FastBoot Image Type"
-                default UBOOT_FAST_BOOT_RTSMART
-
-                config UBOOT_FAST_BOOT_RTSMART
-                    bool "FastBoot RTSMART"
-                config UBOOT_FAST_BOOT_LINUX
-                    bool "FastBoot Linux"
-            endchoice
-
-            config UBOOT_SPL_BOOT_IMG_TYPE
-                int
-                default 0 if UBOOT_FAST_BOOT_LINUX
-                default 1 if UBOOT_FAST_BOOT_RTSMART
-
-        endif
-
     menuconfig UBOOT_USE_PREBUILT
         bool "Uboot Use Prebuilt Binaries"
         default n
