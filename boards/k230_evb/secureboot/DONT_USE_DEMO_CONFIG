@@ -1,0 +1,17 @@
+# Do Not Use Demo Configs
+
+These files are demo-only secure-boot examples.
+
+Do not ship products with the checked-in keys or config values from this directory.
+
+Generate fresh secure-boot material before enabling secure boot:
+
+`python tools/gen_secureboot_configs.py --output-dir /path/to/your/secureboot_dir`
+
+The generator writes:
+
+- `secure_config_aes_rsa_pem.json`
+- `secure_config_sm4_sm2.json`
+- per-stage RSA PEM files
+
+Then point `CONFIG_SECURE_BOOT_CONFIG_FILE` at the generated config you intend to use.

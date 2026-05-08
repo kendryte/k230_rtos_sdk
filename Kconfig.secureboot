@@ -1,0 +1,75 @@
+menu "Secure Boot Configuration"
+
+    config SECURE_BOOT_CONFIG_FILE
+        string "Shared SecureBoot Config Path In Board Dir"
+        default "secureboot/secure_config_aes_rsa_pem.json"
+        depends on SECURE_BOOT_SPL_ENABLE || SECURE_BOOT_FIRMWARE_ENABLE
+        help
+            Shared secure-boot config used by SPL and Firmware.
+            The configured path is resolved relative to
+            boards/${CONFIG_BOARD} by default. An absolute path is also
+            accepted.
+            Place the secure config and related assets, such as PEM
+            certificates and private keys, under a board subdirectory like
+            boards/${CONFIG_BOARD}/secureboot/ and set this option to the
+            config path within that directory.
+            The file should define separate top-level `spl`, and
+            `firmware` objects, each containing the stage-specific firmware,
+            encryption, and signing settings. Each section should match the
+            corresponding `SECURE_BOOT_*_TYPE` selection. Legacy flat
+            single-stage files are still accepted by the tooling.
+
+    menuconfig SECURE_BOOT_SPL_ENABLE
+        bool "SPL Enable SecureBoot"
+        default n
+        help
+            Protect the SPL image consumed directly by BROM.
+
+        if SECURE_BOOT_SPL_ENABLE
+            choice
+                prompt "SPL SecureBoot Type"
+                default SECURE_BOOT_SPL_NONE
+
+                config SECURE_BOOT_SPL_NONE
+                    bool "None"
+                config SECURE_BOOT_SPL_SM4_SM2
+                    bool "SM4 Encrypt + SM2 Sign"
+                config SECURE_BOOT_SPL_AES_RSA
+                    bool "AES Encrypt + RSA Sign"
+            endchoice
+
+            config SECURE_BOOT_SPL_TYPE
+                int
+                default 0 if SECURE_BOOT_SPL_NONE
+                default 1 if SECURE_BOOT_SPL_SM4_SM2
+                default 2 if SECURE_BOOT_SPL_AES_RSA
+        endif
+
+    menuconfig SECURE_BOOT_FIRMWARE_ENABLE
+        bool "Firmware Enable SecureBoot"
+        default n
+        help
+            Protect firmware using the shared secure-boot config file's `firmware`
+            section.
+
+        if SECURE_BOOT_FIRMWARE_ENABLE
+            choice
+                prompt "Firmware SecureBoot Type"
+                default SECURE_BOOT_FIRMWARE_NONE
+
+                config SECURE_BOOT_FIRMWARE_NONE
+                    bool "None"
+                config SECURE_BOOT_FIRMWARE_SM4_SM2
+                    bool "SM4 Encrypt + SM2 Sign"
+                config SECURE_BOOT_FIRMWARE_AES_RSA
+                    bool "AES Encrypt + RSA Sign"
+            endchoice
+
+            config SECURE_BOOT_FIRMWARE_TYPE
+                int
+                default 0 if SECURE_BOOT_FIRMWARE_NONE
+                default 1 if SECURE_BOOT_FIRMWARE_SM4_SM2
+                default 2 if SECURE_BOOT_FIRMWARE_AES_RSA
+        endif
+
+endmenu

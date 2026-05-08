@@ -1,37 +1,38 @@
 ifneq ($(MKENV_INCLUDED),1)
-export SDK_SRC_ROOT_DIR := $(realpath $(dir $(realpath $(lastword $(MAKEFILE_LIST))))/../../)
-
-include $(SDK_SRC_ROOT_DIR)/tools/mkenv.mk
-
+include mkenv.mk
 endif
-
-export SDK_APPS_IMAGE_DIR := ${SDK_BUILD_IMAGES_DIR}/sdcard/app/
 
 subdirs-y :=
 include apps.mk
 
-# Add directories to the build system
-subdirs := $(sort $(subdirs-y))
-
 .PHONY: all clean distclean
 
-# Target to check and create the directory if it doesn't exist
-check_dir:
-ifneq ($(strip $(subdirs)),)
-	@if [ ! -d ${SDK_APPS_IMAGE_DIR} ]; then \
-		echo "Directory does not exist, creating it..."; \
-		mkdir -p ${SDK_APPS_IMAGE_DIR}; \
-	fi
+all: $(subdirs-y)
+	@echo "Make Applications done."
+
+ifneq ($(strip $(subdirs-y)),)
+.PHONY: $(subdirs-y)
+
+$(subdirs-y):
+	@echo "[BUILD] applications $@"
+	@$(MAKE) -C $@ all || exit $?;
 endif
 
-all: check_dir
-	@$(foreach dir,$(subdirs),$(MAKE) -C $(dir) all;)
-
 clean:
-	@$(foreach dir,$(subdirs),$(MAKE) -C $(dir) clean;)
+	@if [ -n "$(subdirs-y)" ]; then \
+		for dir in $(subdirs-y); do \
+			echo "[CLEAN] applications $$dir"; \
+			$(MAKE) -C $$dir clean || exit $?; \
+		done; \
+	fi
 
 distclean: clean
-	@$(foreach dir,$(subdirs),$(MAKE) -C $(dir) distclean;)
+	@if [ -n "$(subdirs-y)" ]; then \
+		for dir in $(subdirs-y); do \
+			echo "[DISTCLEAN] applications $$dir"; \
+			$(MAKE) -C $$dir distclean || exit $?; \
+		done; \
+	fi
 
 .PHONY: gen_kconfig
 gen_kconfig:

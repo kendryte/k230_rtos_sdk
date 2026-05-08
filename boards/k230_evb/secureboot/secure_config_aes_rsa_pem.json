@@ -1,0 +1,30 @@
+{
+  "spl": {
+    "firmware": {
+      "version_bytes": "00000000"
+    },
+    "aes": {
+      "key": "24501ad384e473963d476edcfe08205237acfd49b5b8f33857f8114e863fec7f",
+      "auth_data": ""
+    },
+    "rsa": {
+      "key_size": 2048,
+      "public_key_file": "rsa_cert.pem",
+      "private_key_file": "rsa_priv.pem"
+    }
+  },
+  "firmware": {
+    "firmware": {
+      "version_bytes": "00000000"
+    },
+    "aes": {
+      "key": "24501ad384e473963d476edcfe08205237acfd49b5b8f33857f8114e863fec7f",
+      "auth_data": ""
+    },
+    "rsa": {
+      "key_size": 2048,
+      "public_key_file": "rsa_cert.pem",
+      "private_key_file": "rsa_priv.pem"
+    }
+  }
+}

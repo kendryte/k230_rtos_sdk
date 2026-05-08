@@ -40,7 +40,7 @@ jobs:
         run: |
           rm -rf *
           ls -alh
-          ~/.bin/repo init -u git@github.com:canmv-k230/manifest.git -m rtsmart.xml
+          ~/.bin/repo init -u git@github.com:canmv-k230/manifest.git
           ~/.bin/repo sync
 
       - name: Prepare Environment
@@ -70,8 +70,8 @@ jobs:
             echo "-------------------"
             echo "build project ${proj}"
             echo "-------------------"
-            make ${proj}
-            time make log
+            make ${proj} ENABLE_ALL_SAMPLES=1
+            time make -j8
             echo "-------------------"
           done
 

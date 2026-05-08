@@ -36,13 +36,19 @@ menu "RT-Smart Configuration"
 
     config RTSMART_LWP_APP_STACK_SIZE
         hex "Rtsmart LWP app stack size"
-        default 0x10000
+        default 0x20000
         help
-            The stack size for LWP application, default is 0x10000 bytes.
+            The stack size for LWP application, default is 0x20000 bytes.
 
     config RTT_AUTO_EXEC_CMD
         string "Rtsmart auto execute command string"
-        default "/bin/preload &"
+        default "@preload &" if FAST_BOOT_CONFIGURATION
+        default ""
+        help
+            Under Secure Boot, this command must start with @preload.
+            @preload is an internal auto-exec trigger, not an msh command.
+            Use @preload only when FAST_BOOT_CONFIGURATION is enabled and a
+            real rtapp image is preloaded by U-Boot and described by ATAG.
 
     menuconfig RT_AUTO_RESIZE_PARTITION
         bool "Enable auto resize partition"
@@ -59,6 +65,10 @@ menu "RT-Smart Configuration"
         endif
 
     menu "RT-Thread Smart System Features"
+        config ENABLE_DUAL_CDC_PORT
+            bool "Enable dual CDC ACM ports"
+            default n
+
         config ENABLE_NETWORK_RT_LAN_OVER_USB
             bool "Enable Network RT-Thread Lan(eth) over USB"
             default y
@@ -81,8 +91,5 @@ menu "RT-Smart Configuration"
             bool "Enable Rotary Encoder Support"
             default n
     endmenu
-
-    comment "Examples Configuration"
-    source "$(SDK_BUILD_DIR)/Kconfig.rtt_examples"
 
 endmenu

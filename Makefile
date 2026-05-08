@@ -40,14 +40,33 @@ savedefconfig: $(KCONF) $(SDK_SRC_ROOT_DIR)/.config
 .PHONY: .autoconf
 .autoconf: $(SDK_SRC_ROOT_DIR)/.config.old
 
+.PHONY: rm_image
+rm_image:
+	@rm -rf $(SDK_BUILD_IMAGES_DIR)
+
+.PHONY: prepare
+prepare: .autoconf rm_image
+
+
 %_defconfig: $(KCONF)
 	$(call del_mark)
 
 	$(call gen_kconfig,$(SDK_CANMV_SRC_DIR),canmv)
 	$(call gen_kconfig,$(SDK_RTSMART_SRC_DIR)/examples,rtt_examples)
-	@make -C $(SDK_APPS_SRC_DIR) gen_kconfig || exit $?
+	@make -C $(SDK_APPS_SRC_DIR) gen_kconfig || exit 1
 
-	@$(KCONF) --defconfig $(SDK_SRC_ROOT_DIR)/configs/$@ $(SDK_SRC_ROOT_DIR)/Kconfig || exit $?
+	@if [ -f "$(SDK_SRC_ROOT_DIR)/tools/merge_configs.py" ]; then \
+		$(PYTHON) $(SDK_SRC_ROOT_DIR)/tools/merge_configs.py \
+			--defconfig "$(SDK_SRC_ROOT_DIR)/configs/$@" \
+			--output .defconfig.tmp \
+			--samples "$(SDK_SRC_ROOT_DIR)/tools/all_samples_config" \
+			--enable-samples "$(ENABLE_ALL_SAMPLES)"; \
+	else \
+		cp "$(SDK_SRC_ROOT_DIR)/configs/$@" .defconfig.tmp; \
+	fi
+
+	@$(KCONF) --defconfig .defconfig.tmp "$(SDK_SRC_ROOT_DIR)/Kconfig" || exit 1
+	@rm -f .defconfig.tmp
 
 	@if [ ! -d "$(SDK_CANMV_SRC_DIR)" ]; then \
 		echo "canmv does not exist, updating CONFIG_SDK_ENABLE_CANMV in .config"; \
@@ -69,7 +88,7 @@ list-def:
 	@ls $(SDK_SRC_ROOT_DIR)/configs/ | awk -v current="$(MK_LIST_DEFCONFIG)" '{if ($$0 == current) print NR, "[*]", $$0; else print NR, "[ ]", $$0}'
 
 .PHONY: uboot uboot-clean uboot-distclean uboot-menuconfig
-uboot: .autoconf
+uboot: prepare
 	@$(MAKE) -C $(SDK_UBOOT_SRC_DIR) all
 uboot-clean:
 	@$(MAKE) -C $(SDK_UBOOT_SRC_DIR) clean
@@ -80,7 +99,7 @@ uboot-menuconfig:
 
 
 .PHONY: rtsmart rtsmart-clean rtsmart-distclean rtsmart-menuconfig
-rtsmart: .autoconf
+rtsmart: prepare
 	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR) all
 rtsmart-clean:
 	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR) clean
@@ -91,7 +110,7 @@ rtsmart-menuconfig:
 
 
 .PHONY: opensbi opensbi-clean opensbi-distclean
-opensbi: .autoconf rtsmart
+opensbi: prepare rtsmart
 	@$(MAKE) -C $(SDK_OPENSBI_SRC_DIR) all
 opensbi-clean:
 	@$(MAKE) -C $(SDK_OPENSBI_SRC_DIR) clean
@@ -100,7 +119,7 @@ opensbi-distclean:
 
 
 .PHONY: canmv canmv-clean canmv-distclean
-canmv: .autoconf
+canmv: prepare opensbi
 ifeq ($(CONFIG_SDK_ENABLE_CANMV),y)
 	@$(MAKE) -C $(SDK_CANMV_SRC_DIR) all
 endif
@@ -115,7 +134,7 @@ ifeq ($(CONFIG_SDK_ENABLE_CANMV),y)
 endif
 
 .PHONY: app app-clean app-distclean
-app: .autoconf
+app: prepare opensbi
 	@$(MAKE) -C $(SDK_APPS_SRC_DIR) all
 app-clean:
 	@$(MAKE) -C $(SDK_APPS_SRC_DIR) clean
@@ -123,7 +142,7 @@ app-distclean:
 	@$(MAKE) -C $(SDK_APPS_SRC_DIR) distclean
 
 .PHONY: arduino-sdk arduino-sdk-clean arduino-sdk-distclean
-arduino-sdk: .autoconf uboot rtsmart opensbi
+arduino-sdk: prepare uboot rtsmart opensbi
 	@$(MAKE) -C $(SDK_UBOOT_SRC_DIR) arduino-sdk
 	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR) arduino-sdk
 	@$(MAKE) -C $(SDK_OPENSBI_SRC_DIR) arduino-sdk
@@ -136,12 +155,11 @@ arduino-sdk-distclean: uboot-distclean
 	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR) arduino-sdk-distclean
 	@$(MAKE) -C $(SDK_OPENSBI_SRC_DIR) arduino-sdk-distclean
 
-.PHONY: rm_image
-rm_image:
-	@rm -rf $(SDK_BUILD_IMAGES_DIR)
+.PHONY: build
+build: uboot rtsmart opensbi canmv app
 
 .PHONY: all
-all: rm_image uboot rtsmart opensbi canmv app 
+all: build
 	@python3 $(SDK_TOOLS_DIR)/gen_image_rtapp.py
 	@$(SDK_TOOLS_DIR)/gen_image.sh
 	@echo "Build K230 done, board $(CONFIG_BOARD), config $(MK_LIST_DEFCONFIG)"
@@ -182,6 +200,12 @@ else
 	@$(MAKE) -f $(SDK_TOOLS_DIR)/toolchain_linux.mk install
 endif
 
+# Generate DDR test image targets using pattern rule
+ddr_test_%:
+	@echo "Build DDR test image, size: $* MB"
+	@sed -i 's/.*CONFIG_UBOOT_USE_PREBUILT.*/# CONFIG_UBOOT_USE_PREBUILT is not set/' .config
+	@python3 tools/gen_ddr_test_img.py $*
+
 .PHONY: help
 help:
 	@echo "Usage: "
@@ -217,6 +241,7 @@ else
 endif
 	@echo "make log                      -- Make all and generate log.txt";
 	@echo "make dl_toolchain             -- Download toolchain, only need run at first time";
+	@echo "make ddr_test_<size>      	 -- Build DDR test image (sizes: 128, 512, 1024, 2048 MB)"
 	@echo "make arduino-sdk              -- Generate arduino-sdk";
 	@echo "Supported board configs";
 	@ls $(SDK_SRC_ROOT_DIR)/configs/ | awk '{print "\t", $$0}'

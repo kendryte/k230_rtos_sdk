@@ -1,93 +1,81 @@
-# Use the toolchain defined in apps.mk
+# Include base configuration
+include ../mkenv.mk
+include $(SDK_RTSMART_SRC_DIR)/libs/mk/toolchain_riscv64_musl.mk
 
-ifneq ($(MKENV_INCLUDED),1)
-export SDK_SRC_ROOT_DIR := $(realpath $(dir $(realpath $(lastword $(MAKEFILE_LIST))))/../../../)
-endif
+# Build configuration
+DIR 	:= $(shell basename `pwd`)
+BUILD	:= $(SDK_APPS_BUILD_DIR)/$(DIR)
+BIN 	:= $(SDK_APPS_IMAGE_DIR)/$(DIR)
 
-include $(SDK_SRC_ROOT_DIR)/tools/mkenv.mk
+# Source files handling
+SRC_DIRS  := .
 
-include $(SDK_APPS_SRC_DIR)/toolchain.mk
+SRCS 	:= $(shell find $(SRC_DIRS) -maxdepth 1 -type f \( -name "*.c" -o -name "*.cpp" -o -name "*.cc" \))
+OBJS	:= $(addprefix $(BUILD)/, $(addsuffix .o, $(basename $(notdir $(SRCS)))))
+DEPS	:= $(OBJS:.o=.d)
 
-LIB_CFLAGS :=
-LIB_LDFLAGS :=
+# Directory creation logic - Captured and sorted
+OBJ_DIRS  := $(sort $(dir $(OBJS) $(BIN)))
 
+# Library configuration
 include $(SDK_RTSMART_SRC_DIR)/libs/mk/libmpp.mk
 include $(SDK_RTSMART_SRC_DIR)/libs/mk/libopencv.mk
 include $(SDK_RTSMART_SRC_DIR)/libs/mk/libnncase.mk
 include $(SDK_RTSMART_SRC_DIR)/libs/mk/librtsmart_hal.mk
 include $(SDK_RTSMART_SRC_DIR)/libs/mk/lib3rdparty.mk
-include $(SDK_RTSMART_SRC_DIR)/libs/mk/libopenblas.mk
 
-SDK_APPS_IMAGE_DIR ?= $(shell pwd)
+# Compiler flags
+C_CXX_FLAGS := -fopenmp -march=rv64imafdcv -mabi=lp64d -mcmodel=medany -Os
+C_CXX_FLAGS += -I. $(LIB_CFLAGS) -I$(SDK_SRC_ROOT_DIR)/include -include "generated/autoconf.h"
+C_CXX_FLAGS += -Wall -Wextra -ffunction-sections -fdata-sections
 
-BIN := $(SDK_APPS_IMAGE_DIR)/helloworld
-BUILD = ${SDK_APPS_BUILD_DIR}/helloworld/
+CFLAGS 		:= $(C_CXX_FLAGS) -std=gnu99
+CXX_FLAGS 	:= $(C_CXX_FLAGS)
 
-SRC_DIRS :=
-
-SFILES :=
-SFILES_EXCLUDE :=
-SFLAGS :=
-
-CFILES :=
-CFILES_EXCLUDE :=
-CFLAGS :=
-
-CFILES += main.c
-
-CFLAGS := -march=rv64imafdcv -mabi=lp64d -mcmodel=medany
-CFLAGS += -std=gnu99 -fdata-sections -ffunction-sections
-
-CFLAGS += -I$(SDK_SRC_ROOT_DIR)/include/generated
-CFLAGS += $(LIB_CFLAGS)
-
-LDFLAGS := -T link.lds --static -Wl,--gc-sections
+# Linker flags
+LDFLAGS := -T $(SDK_RTSMART_SRC_DIR)/libs/mk/link.lds --static -Wl,--gc-sections
 LDFLAGS += $(LIB_LDFLAGS)
 
-SFILES_ALL = $(foreach dir, $(SRC_DIRS), $(wildcard $(dir)/*.S))
-CFILES_ALL = $(foreach dir, $(SRC_DIRS), $(wildcard $(dir)/*.c))
-
-SFILES += $(filter-out $(SFILES_EXCLUDE), $(SFILES_ALL))
-CFILES += $(filter-out $(CFILES_EXCLUDE), $(CFILES_ALL))
-
-SDEPS	:= $(patsubst %, $(BUILD)/%, $(SFILES:.S=.o.d))
-CDEPS	:= $(patsubst %, $(BUILD)/%, $(CFILES:.c=.o.d))
-DEPS	:= $(SDEPS) $(CDEPS)
-
-SOBJS	:= $(patsubst %, $(BUILD)/%, $(SFILES:.S=.o))
-COBJS	:= $(patsubst %, $(BUILD)/%, $(CFILES:.c=.o))
-OBJS	:= $(SOBJS) $(COBJS)
-
+# Phony targets
 .PHONY: all clean distclean
+
 all: $(BIN)
-	@echo "Make $(BIN) done."
+	@$(ECHO) [BUILD] applications $(DIR) done.
+
+.PHONY: .FORCE
+.FORCE:
+
+# Rule to link the final ELF - Order-only dependency on directory
+$(BIN): $(OBJS) .FORCE | $(OBJ_DIRS)
+	@echo "[LD] $@"
+	$(Q)$(CXX) $(CFLAGS) $(OBJS) $(LDFLAGS) -o $@
+	$(Q)$(STRIP) $@
+
+# Rule for C objects - Order-only dependency on directory
+vpath %.c $(SRC_DIRS)
+$(BUILD)/%.o: %.c | $(OBJ_DIRS)
+	@echo "[CC] $@"
+	$(Q)$(CC) $(CFLAGS) -MD -MP -MF $(@:.o=.d) -c $< -o $@
+
+# Rule for C++ objects - Order-only dependency on directory
+vpath %.cc $(SRC_DIRS)
+$(BUILD)/%.o: %.cc | $(OBJ_DIRS)
+	@echo "[CXX] $@"
+	$(Q)$(CXX) $(CXX_FLAGS) -MD -MP -MF $(@:.o=.d) -c $< -o $@
+
+vpath %.cpp $(SRC_DIRS)
+$(BUILD)/%.o: %.cpp | $(OBJ_DIRS)
+	@echo "[CXX] $@"
+	$(Q)$(CXX) $(CXX_FLAGS) -MD -MP -MF $(@:.o=.d) -c $< -o $@
+
+# Actual directory creation rule
+$(OBJ_DIRS):
+	$(Q)mkdir -p $@
 
 clean:
-	@rm -rf $(BIN) $(OBJS) $(DEPS)
+	@rm -rf $(BIN)
 
 distclean: clean
+	@rm -rf $(BUILD)
 
-$(BIN): $(OBJS)
-	@echo [LD] $@
-	@$(CC) $^ -o $@ $(CFLAGS) $(LDFLAGS)
-	@$(STRIP) $@
-
-$(SOBJS) : $(BUILD)/%.o : %.S
-	@echo [AS] $<
-	@$(AS) $(SFLAGS) -MD -MP -MF $@.d -c $< -o $@
-
-$(COBJS) : $(BUILD)/%.o : %.c
-	@echo [CC] $<
-	@$(CC) $(CFLAGS) -MD -MP -MF $@.d -c $< -o $@
-
-# $(sort $(var)) removes duplicates
-#
-# The net effect of this, is it causes the objects to depend on the
-# object directories (but only for existence), and the object directories
-# will be created if they don't exist.
-OBJ_DIRS = $(sort $(dir $(OBJS)))
-$(OBJS): | $(OBJ_DIRS)
-$(OBJ_DIRS):
-	@mkdir -p $@
-
-sinclude $(DEPS)
+-include $(DEPS)

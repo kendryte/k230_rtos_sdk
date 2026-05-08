@@ -34,7 +34,7 @@ ifeq ($(CONFIG_OPENSBI_USE_PREBUILT_FW_JUMP),y)
 else
 	@echo "Compiling OpenSBI..."
 	@pushd $(SDK_OPENSBI_SRC_DIR)/opensbi > /dev/null; \
-	PLATFORM=kendryte/fpgac908 FW_PAYLOAD=n $(MAKE) -j$(NCPUS) O=$(SDK_OPENSBI_BUILD_DIR) OPENSBI_QUIET=1 CROSS_COMPILE=$(CROSS_COMPILE) || exit $?; \
+	$(MAKE) O=$(SDK_OPENSBI_BUILD_DIR) PLATFORM=kendryte/fpgac908 FW_PAYLOAD=n OPENSBI_QUIET=1 CROSS_COMPILE=$(CROSS_COMPILE) || exit $?; \
 	cp $(SDK_OPENSBI_BUILD_DIR)/platform/kendryte/fpgac908/firmware/fw_jump.bin $(SDK_OPENSBI_BUILD_DIR)/opensbi.bin || exit $?; \
 	popd > /dev/null;
 endif

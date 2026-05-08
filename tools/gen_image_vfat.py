@@ -29,11 +29,12 @@ image bin.vfat {
         print(f"An error occurred: {e}")
         sys.exit(1)
 
-    # generate preload
-    bin_preload = Path(sdk_images_dir) / "bin" / "preload"
+    bin_dir = Path(sdk_images_dir) / "bin"
+    bin_dir.mkdir(parents=True, exist_ok=True)
 
-    bin_preload.parent.mkdir(parents=True, exist_ok=True)
-    bin_preload.touch(exist_ok=True)
+    bin_preload = bin_dir / "preload"
+    if bin_preload.exists():
+        bin_preload.unlink()
 
     tool = genimage.GenImageTool(sdk_images_dir, output_path, config_path)
     tool.run()

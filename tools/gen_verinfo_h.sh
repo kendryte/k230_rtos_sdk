@@ -10,6 +10,25 @@ parse_nncase_version()
     echo "$VERSION"
 }
 
+get_repo_version_tag()
+{
+    local tag="unknown"
+
+    if git describe --tags --exact-match > /dev/null 2>&1; then
+        tag=$(git describe --long --tags --dirty --always)
+    else
+        tag=$(git tag --sort=-v:refname | head -n 1)
+        [ -z "$tag" ] && tag="unknown"
+    fi
+
+    echo "$tag"
+}
+
+fetch_repo_tags()
+{
+    git fetch --tags > /dev/null 2>&1 || true
+}
+
 gen_version_file()
 {
     local version_file="$1"
@@ -22,19 +41,18 @@ gen_version_file()
         local commitid="unknown"
         local last_tag="unknown"
         git rev-parse --short HEAD  &&  commitid=$(git rev-parse --short HEAD)
-        git describe --tags `git rev-list --tags --max-count=1` && last_tag=$(git describe --tags `git rev-list --tags --max-count=1`)
-        git describe --tags --exact-match  && last_tag=$(git describe --tags --exact-match)
+        fetch_repo_tags
+        last_tag=$(get_repo_version_tag)
         sdk_ver="${last_tag}-$(date "+%Y%m%d-%H%M%S")-$(whoami)-$(hostname)-${commitid}"
     popd > /dev/null
-
 
     if [ "$CONFIG_SDK_ENABLE_CANMV" = "y" ]; then
         pushd "${SDK_CANMV_SRC_DIR}" > /dev/null
             local commitid="unknown"
             local last_tag="unknown"
             git rev-parse --short HEAD  &&  commitid=$(git rev-parse --short HEAD)
-            git describe --tags `git rev-list --tags --max-count=1` && last_tag=$(git describe --tags `git rev-list --tags --max-count=1`)
-            git describe --tags --exact-match  && last_tag=$(git describe --tags --exact-match)
+            fetch_repo_tags
+            last_tag=$(get_repo_version_tag)
             canmv_ver="${last_tag}-$(date "+%Y%m%d-%H%M%S")-$(whoami)-$(hostname)-${commitid}"
         popd > /dev/null
     fi
