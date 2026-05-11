@@ -95,6 +95,10 @@ menu "Board Configuration"
             bool "K230 CanMV MRT"
             select BOARD_CHIP_K230
 
+        config BOARD_K230D_CANMV_LUSHANPI_LITE
+            bool "K230 CanMV Lushanpi Lite"
+            select BOARD_CHIP_K230D
+
     endchoice
 
     config BOARD
@@ -120,6 +124,7 @@ menu "Board Configuration"
         default "k230d_labplus_ai_camera_v2" if BOARD_K230D_CANMV_LABPLUS_AI_CAMERA_V2
         default "k230_labplus_1956" if BOARD_K230_LABPLUS_1956
         default "k230_canmv_mrt" if BOARD_K230_CANMV_MRT
+        default "k230d_canmv_lushanpi_lite" if BOARD_K230D_CANMV_LUSHANPI_LITE
 
     config BOARD_NAME
         string "Board Generate Image Name"
@@ -143,6 +148,7 @@ menu "Board Configuration"
         default "CanMV_K230D_LabPlusAiCamera_V2" if BOARD_K230D_CANMV_LABPLUS_AI_CAMERA_V2
         default "CanMV_K230_LabPlus_1956" if BOARD_K230_LABPLUS_1956
         default "CanMV_K230_MRT" if BOARD_K230_CANMV_MRT
+        default "CanMV_K230D_Lushanpi_Lite" if BOARD_K230D_CANMV_LUSHANPI_LITE
 
     config BOARD_GEN_IMAGE_CFG_FILE
         string "Board specified generate image configure file"
@@ -191,5 +197,6 @@ menu "Board Configuration"
     source "$(SDK_BOARDS_DIR)/k230d_labplus_ai_camera_v2/Kconfig"
     source "$(SDK_BOARDS_DIR)/k230_labplus_1956/Kconfig"
     source "$(SDK_BOARDS_DIR)/k230_canmv_mrt/Kconfig"
+    source "$(SDK_BOARDS_DIR)/k230d_canmv_lushanpi_lite/Kconfig"
 
 endmenu
