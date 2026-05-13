@@ -106,7 +106,6 @@ parse_repo_version()
     local revision
     local latest_tag
     local commitid
-    local dirty_suffix=""
 
     pushd "$repo_dir" > /dev/null || return 1
     git fetch --tags > /dev/null 2>&1 || true
@@ -117,14 +116,10 @@ parse_repo_version()
         latest_tag=$(git tag --sort=-v:refname | head -n 1)
         commitid=$(git rev-parse --short HEAD)
 
-        if ! git diff-index --quiet HEAD -- 2>/dev/null; then
-            dirty_suffix="-dirty"
-        fi
-
         if [ -n "$latest_tag" ]; then
-            revision="${latest_tag}-${commitid}${dirty_suffix}"
+            revision="${latest_tag}-${commitid}"
         else
-            revision="${commitid}${dirty_suffix}"
+            revision="${commitid}"
         fi
     fi
     popd > /dev/null || return 1
