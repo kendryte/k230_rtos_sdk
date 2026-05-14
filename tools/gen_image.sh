@@ -113,11 +113,13 @@ parse_repo_version()
     if git describe --tags --exact-match > /dev/null 2>&1; then
         revision=$(git describe --long --tags --dirty --always)
     else
-        latest_tag=$(git tag --sort=-v:refname | head -n 1)
         commitid=$(git rev-parse --short HEAD)
+        latest_tag=$(git tag --sort=-v:refname | head -n 1)
 
         if [ -n "$latest_tag" ]; then
-            revision="${latest_tag}-${commitid}"
+            commit_count=$(git rev-list --count "${latest_tag}..HEAD" 2>/dev/null || echo "0")
+
+            revision="${latest_tag}-${commit_count}-g${commitid}"
         else
             revision="${commitid}"
         fi
