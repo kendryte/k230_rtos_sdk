@@ -62,6 +62,16 @@ menu "RT-Smart Configuration"
                 int "RTSmart Filesystem Count"
                 default 3
                 range 2 3
+
+            config RT_AUTO_RESIZE_PARTITION_ALIGN_SIZE
+                hex "Auto resize partition alignment size"
+                default 0x40000000
+                help
+                    Alignment size in bytes for the start of the auto-created
+                    last partition. The default 0x40000000 keeps the new
+                    partition aligned to 1 GiB.
+                    Set it to 0 to start immediately after the previous
+                    partition.
         endif
 
     menu "RT-Thread Smart System Features"
