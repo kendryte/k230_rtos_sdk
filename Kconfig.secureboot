@@ -19,7 +19,7 @@ menu "Secure Boot Configuration"
             corresponding `SECURE_BOOT_*_TYPE` selection. Legacy flat
             single-stage files are still accepted by the tooling.
 
-    menuconfig SECURE_BOOT_SPL_ENABLE
+    config SECURE_BOOT_SPL_ENABLE
         bool "SPL Enable SecureBoot"
         default n
         help
@@ -45,7 +45,7 @@ menu "Secure Boot Configuration"
                 default 2 if SECURE_BOOT_SPL_AES_RSA
         endif
 
-    menuconfig SECURE_BOOT_FIRMWARE_ENABLE
+    config SECURE_BOOT_FIRMWARE_ENABLE
         bool "Firmware Enable SecureBoot"
         default n
         help
