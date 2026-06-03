@@ -116,33 +116,43 @@ class GenImageTool:
 
     def _parse_image_block(self, lines: List[str], index_start: int) -> (Dict[str, Any], int):
         i = index_start
+        type_name = None
         type_config = {}
         config = {}
         partitions = []
 
         # Process partitions and other configurations
         while i < len(lines):
-            line = lines[i]
+            line = lines[i].strip()
             if line.startswith('}'):
                 break
             elif line.startswith('partition'):
                 block_name = line.split()[1]
                 partition, i = self._get_type_config(lines, i)
-                i += 1
-
                 partitions.append({
                     'type': 'partition',
                     'name': block_name,
                     'config': partition
                 })
+                i += 1
+                continue
             elif len(line.split()) >= 2 and line.split()[1] == '{':
-                # Process type configuration type_config
+                # Process the image handler block, e.g. kdimage { ... }
                 parts = line.split()
                 type_name = parts[0]
-                type_config, i = self._get_type_config(lines, i - 1)
+                type_config, i = self._get_type_config(lines, i)
                 i += 1
+                continue
+            elif '=' in line:
+                key, value = self._parse_config_line(line)
+                config[key] = value
+                i += 1
+                continue
             else:
-                config, i = self._get_type_config(lines, i - 1)
+                raise ValueError(f"Unknown image block content {line}")
+
+        if type_name is None:
+            raise ValueError("Image block missing handler type configuration")
 
         blocks = {
             'type': type_name,
@@ -153,33 +163,37 @@ class GenImageTool:
 
         return blocks, i
 
+    def _parse_config_line(self, stripped_line: str) -> Tuple[str, Any]:
+        key, value = stripped_line.split('=', 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+
+        if value.lower() == 'true':
+            parsed_value = True
+        elif value.lower() == 'false':
+            parsed_value = False
+        elif value.isdigit():
+            parsed_value = int(value)
+        else:
+            parsed_value = value
+
+        return key, parsed_value
+
     def _get_type_config(self, lines: List[str], index_start: int) -> (Dict[str, Any], int):
         # Parse configuration within {}
         i = index_start
         config = {}
 
-        while i < len(lines):
+        while i + 1 < len(lines):
             i += 1
-            line = lines[i]
-            stripped_line = line.strip()
+            stripped_line = lines[i].strip()
+
+            if stripped_line.startswith('}'):
+                break
 
             if '=' in stripped_line:
-                key, value = stripped_line.split('=', 1)
-                key = key.strip()
-                value = value.strip().strip('"').strip("'")  # Remove quotes if present
-
-                # Convert value to appropriate type
-                if value.lower() == 'true':
-                    config[key] = True
-                elif value.lower() == 'false':
-                    config[key] = False
-                elif value.isdigit():
-                    config[key] = int(value)
-                else:
-                    config[key] = value
-
-            if stripped_line.endswith('}'):
-                break
+                key, value = self._parse_config_line(stripped_line)
+                config[key] = value
 
         return config, i
 
@@ -303,34 +317,38 @@ class GenImageTool:
 
     def _process_image_flash_block(self, image: Image, content: Dict[str, Any], flash_blocks: List[Dict[str, Any]]) -> None:
         """Process image flash_type"""
-        if image.image_type in ['flash', 'uffs']:
-            for sub_block in flash_blocks:
-                if content.get('flashtype') == sub_block.get('name'):
-                    content = sub_block['content']
-                    flash_type = Flash_type(
-                        name=sub_block['name'],
-                        pebsize=content.get('pebsize', 0),
-                        lebsize=content.get('lebsize', 0),
-                        numpebs=content.get('numpebs', 0),
-                        minimum_io_unit_size=content.get('minimum-io-unit-size', 0),
-                        vid_header_offset=content.get('vid-header-offset', 0),
-                        sub_page_size=content.get('sub-page-size', 0),
+        if image.image_type not in ['flash', 'uffs', 'kdimage']:
+            return
 
-                        is_uffs=(image.image_type == 'uffs'),
-                        page_size=content.get('page-size', 0),
-                        block_pages=content.get('block-pages', 0),
-                        total_blocks=content.get('total-blocks', 0),
-                        spare_size=content.get('spare-size', 0),
-                        status_offset=content.get('status-offset', 0),
-                        ecc_option=content.get('ecc-option', 3),
-                        ecc_size=content.get('ecc-size', 0)
-                    )
-                    # print(f"Flash_type: {flash_type}")
+        flashtype_name = content.get('flashtype') if content else None
+        if not flashtype_name:
+            return
 
-                    image.flash_type = flash_type
-                    break
-            else:
-                raise ImageError(f"Image {image.name} flash type {flash_blocks['name']} not found")
+        for sub_block in flash_blocks:
+            if flashtype_name == sub_block.get('name'):
+                content = sub_block['content']
+                flash_type = Flash_type(
+                    name=sub_block['name'],
+                    pebsize=content.get('pebsize', 0),
+                    lebsize=content.get('lebsize', 0),
+                    numpebs=content.get('numpebs', 0),
+                    minimum_io_unit_size=content.get('minimum-io-unit-size', 0),
+                    vid_header_offset=content.get('vid-header-offset', 0),
+                    sub_page_size=content.get('sub-page-size', 0),
+
+                    is_uffs=(image.image_type == 'uffs'),
+                    page_size=content.get('page-size', 0),
+                    block_pages=content.get('block-pages', 0),
+                    total_blocks=content.get('total-blocks', 0),
+                    spare_size=content.get('spare-size', 0),
+                    status_offset=content.get('status-offset', 0),
+                    ecc_option=content.get('ecc-option', 3),
+                    ecc_size=content.get('ecc-size', 0)
+                )
+                image.flash_type = flash_type
+                return
+
+        raise ImageError(f"Image {image.name} flash type {flashtype_name} not found")
     
     def _process_partition_block(self, image: Image, block: Dict[str, Any]) -> None:
         """Process image partition"""

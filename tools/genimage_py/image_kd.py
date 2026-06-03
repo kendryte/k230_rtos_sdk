@@ -30,6 +30,7 @@ MEDIUM_TYPE_SPI_NAND = 1
 MEDIUM_TYPE_SPI_NOR = 2
 
 KDIMG_CONTENT_START_OFFSET = 64 * 1024  # Image content start offset (64KB)
+KDIMG_DEFAULT_SPI_NAND_PAGE_SIZE = 2048
 
 KD_ALIGNMENT = 4096
 KD_PART_ENTRY_ALIGN = 256      # Partition entry alignment size in bytes
@@ -129,6 +130,7 @@ class KdImageHandler(ComImageHandler):
 
         self.header: KdImgHdr = KdImgHdr()
         self.medium_type: str = "mmc"
+        self.spi_nand_page_size: int = KDIMG_DEFAULT_SPI_NAND_PAGE_SIZE
 
         self.part_records: List[KdImgPartRecord] = []
 
@@ -150,6 +152,7 @@ class KdImageHandler(ComImageHandler):
 
         self._parse_config_parameters()
         self._validate_config()
+        self._setup_spi_nand_page_size(image)
         super().validate_config_parameters()
 
         if self.table_type & TYPE_GPT:
@@ -169,6 +172,8 @@ class KdImageHandler(ComImageHandler):
     def _parse_config_parameters(self) -> None:
         """Parse configuration parameters to private data structure"""
         super()._parse_config_parameters()
+
+        self.medium_type = self.config.get("medium-type", self.medium_type)
 
         self.header.image_info = self.config.get("image_info", "")
         if '' == self.header.image_info:
@@ -198,6 +203,15 @@ class KdImageHandler(ComImageHandler):
             self.medium_type = MEDIUM_TYPE_SPI_NOR
         else:
             raise ValueError(f"'{table_type}' is not a valid medium-type")
+
+    def _setup_spi_nand_page_size(self, image: Image) -> None:
+        flash_type = getattr(image, "flash_type", None)
+        if not flash_type:
+            return
+
+        page_size = safe_to_int(getattr(flash_type, "page_size", 0))
+        if page_size > 0:
+            self.spi_nand_page_size = page_size
 
     def _add_virtual_partitions(self, image: Image) -> None:
         """Add virtual partitions related to the partition table"""
@@ -239,6 +253,20 @@ class KdImageHandler(ComImageHandler):
                 )
         # Handle TOC
         super().setup_toc(image, "[TOC]")
+
+        if self.toc_enable:
+            for part in image.partitions:
+                if part.name == "[TOC]":
+                    part.size = self._normalize_toc_size(part.size)
+                    break
+
+    def _normalize_toc_size(self, toc_size: int) -> int:
+        toc_size = max(toc_size, 64)
+
+        if self.medium_type == MEDIUM_TYPE_SPI_NAND:
+            toc_size = max(toc_size, self.spi_nand_page_size)
+
+        return toc_size
 
     def _setup_part_image(self, image: Image, part: Partition) -> None:
         """Setup partition image"""
@@ -382,15 +410,12 @@ class KdImageHandler(ComImageHandler):
             # Offset alignment
             image_write_offset += super().roundup(aligned_child_size, 4096)
 
-            self.header.part_tbl_num = len([p for p in image.partitions])
-            # print(f"tbl_num: {self.header.part_tbl_num} idx: {part_idx}")
-            if part_idx > self.header.part_tbl_num:
-                raise ValueError("Image partition count does not match")
-
         self._generate_final_stage(image, image_write_offset)
 
     def _generate_final_stage(self, image, image_write_offset):
         # Final stage of image generation
+        self.header.part_tbl_num = len(self.part_records)
+
         part_table_data = b''
         for part in self.part_records:
             # print(f"kdimgpart: {part}")
@@ -466,7 +491,7 @@ class KdImageHandler(ComImageHandler):
     def _generate_toc_partition(self, image: Image) -> Image:
         """Generate TOC partition"""
         # Even if there are no entries, generate a minimal TOC partition
-        toc_size = max(64, self.toc_num * 64)
+        toc_size = self._normalize_toc_size(self.toc_num * 64)
 
         if not self.toc_num:
             # Create empty TOC partition (unchanged)

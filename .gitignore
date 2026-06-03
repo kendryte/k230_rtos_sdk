@@ -39,3 +39,6 @@ src/rtsmart/rtsmart/
 src/rtsmart/examples/
 src/uboot/uboot/
 src/uboot/loader/
+
+AGENTS.md
+skills/
