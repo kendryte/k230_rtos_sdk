@@ -1,3 +1,4 @@
 if BOARD_K230D_CANMV_JUNROC_AI_CAM
-
+    config BOARD_NOT_SUPPORT_HW_RTC
+        def_bool y
 endif
