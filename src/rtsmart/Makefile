@@ -44,7 +44,9 @@ SHELL := bash
 		exit 1; \
 	fi; \
 	rm -rf rtconfig.h; \
-	scons --useconfig=configs/${RTSMART_DEFCONFIG} || exit $?; \
+	cp configs/${RTSMART_DEFCONFIG} .config; \
+	python3 $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/rt-thread/tools/defconfig.py --kconfig Kconfig .config || exit $?; \
+	scons --useconfig=.config  || exit $?; \
 	popd; \
 	touch .parse_config
 
@@ -161,10 +163,11 @@ menuconfig:
 	export MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp; \
 	pushd $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3; \
 	rm -rf rtconfig.h .config .config.old; \
-	scons --useconfig=configs/${RTSMART_DEFCONFIG} || exit $?; \
-	scons --genconfig; \
-	scons --menuconfig; \
-	cp .config configs/${RTSMART_DEFCONFIG}; \
+	cp configs/${RTSMART_DEFCONFIG} .config; \
+	python3 $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/rt-thread/tools/defconfig.py --kconfig Kconfig .config || exit $?; \
+	scons --useconfig=.config || exit $?; \
+	scons --menuconfig || exit $?; \
+	python3 $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/rt-thread/tools/savedefconfig.py --kconfig Kconfig --output configs/${RTSMART_DEFCONFIG} .config || exit $?; \
 	popd;
 
 .PHONY: arduino-sdk arduino-sdk-clean arduino-sdk-distclean
