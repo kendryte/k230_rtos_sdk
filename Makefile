@@ -164,6 +164,17 @@ all: build
 	@$(SDK_TOOLS_DIR)/gen_image.sh
 	@echo "Build K230 done, board $(CONFIG_BOARD), config $(MK_LIST_DEFCONFIG)"
 
+.PHONY: flash
+flash:
+ifeq ($(M),)
+	@echo "Error: M not set. Usage: make flash M=SDCARD"
+	@echo "  Choices: EMMC, SDCARD, SPI_NAND, SPI_NOR, OTP"
+	@exit 1
+endif
+	@which python3 >/dev/null 2>&1 || { echo "Error: python3 not found. Please install Python 3."; exit 1; }
+	@python3 -c "import serial" 2>/dev/null || echo "Warning: pyserial not installed (pip install pyserial). Bootloader detection may fail."
+	@python3 $(SDK_TOOLS_DIR)/k230_flash.py --search-dir $(SDK_BUILD_DIR) -m $(M)
+
 .PHONY: clean
 clean: kconfig-clean uboot-clean rtsmart-clean opensbi-clean canmv-clean app-clean
 	@echo "Clean done."
@@ -243,5 +254,6 @@ endif
 	@echo "make dl_toolchain             -- Download toolchain, only need run at first time";
 	@echo "make ddr_test_<size>      	 -- Build DDR test image (sizes: 128, 512, 1024, 2048 MB)"
 	@echo "make arduino-sdk              -- Generate arduino-sdk";
+	@echo "make flash M=SDCARD           -- Download/flash firmware image to connected K230 device";
 	@echo "Supported board configs";
 	@ls $(SDK_SRC_ROOT_DIR)/configs/ | awk '{print "\t", $$0}'
