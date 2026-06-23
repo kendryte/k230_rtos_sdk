@@ -4,11 +4,14 @@ Unified release tool for K230 SDK projects.
 
 Usage:
     release.py branch <rtos|canmv> <version> [--remote NAME] [--dry-run]
+    release.py switch <rtos|canmv> <version> [--remote NAME] [--dry-run]
     release.py tag    <rtos|canmv> <version> [--remote NAME] [--dry-run]
 
 Examples:
     release.py branch rtos v0.8          # create release/rtos-v0.8 branches + manifest
     release.py branch canmv v1.7         # create release/canmv-v1.7 branches + manifest
+    release.py switch rtos v0.8          # ensure all repos on release/rtos-v0.8
+    release.py switch canmv v1.7         # ensure all repos on release/canmv-v1.7
     release.py tag rtos v0.8             # create v0.8 tags on rtos repos
     release.py tag canmv v1.7 --dry-run  # preview tag creation
 """
@@ -174,6 +177,56 @@ def create_branch(repo_path, branch_name, remote, dry_run=False):
     print("✔️  Successfully pushed branch.")
     return True
 
+# ─── Switch Operation ────────────────────────────────────────────────────────
+
+def switch_to_branch(repo_path, branch_name, remote, dry_run=False):
+    """Ensure a repo is on the specified branch, stashing changes if needed."""
+    print(f"🌿 Target branch: {branch_name}")
+    print(f"🌐 Remote: {remote} ({get_remote_url(remote, repo_path)})")
+
+    local = branch_exists_local(branch_name, repo_path)
+    on_remote = branch_exists_remote(branch_name, remote, repo_path)
+
+    if not on_remote and not local:
+        print(f"❌ Branch '{branch_name}' does not exist locally or on remote.")
+        return False
+
+    # Get current branch
+    current = run(["git", "rev-parse", "--abbrev-ref", "HEAD"], repo_path)
+    print(f"📍 Current branch: {current}")
+
+    if current == branch_name:
+        print(f"✅ Already on branch '{branch_name}'")
+        if not dry_run:
+            run(["git", "fetch", remote], repo_path)
+        return True
+
+    # Check for uncommitted changes
+    status = run(["git", "status", "--porcelain"], repo_path)
+    if status:
+        print("⚠️  Working directory has uncommitted changes. Stashing...")
+        if not dry_run:
+            run(["git", "stash", "push", "-m",
+                 f"auto-stash before switch to {branch_name}"], repo_path)
+
+    # Fetch
+    if not dry_run:
+        run(["git", "fetch", remote], repo_path)
+
+    # Checkout
+    if not local:
+        print(f"⬇️  Creating local branch tracking {remote}/{branch_name}...")
+        if not dry_run:
+            run(["git", "checkout", "-b", branch_name,
+                 f"{remote}/{branch_name}"], repo_path)
+    else:
+        print(f"🔄 Switching to '{branch_name}'...")
+        if not dry_run:
+            run(["git", "checkout", branch_name], repo_path)
+
+    print(f"✔️  Now on branch '{branch_name}'")
+    return True
+
 # ─── Tag Operation ────────────────────────────────────────────────────────────
 
 def create_tag(repo_path, tag_name, remote, dry_run=False):
@@ -310,7 +363,7 @@ def generate_manifest(sdk, branch_name, repo_root, dry_run=False):
 # ─── Orchestrator ─────────────────────────────────────────────────────────────
 
 def resolve_repos(action, sdk):
-    repo_map = BRANCH_REPOS if action == "branch" else TAG_REPOS
+    repo_map = BRANCH_REPOS if action in ("branch", "switch") else TAG_REPOS
     repos = repo_map.get(sdk)
     if repos is None:
         print(f"{RED}Error: Unknown SDK type '{sdk}'. Choose from: {', '.join(repo_map)}{NC}")
@@ -323,7 +376,7 @@ def process_repos(action, sdk, name, remote, dry_run, repo_root):
     Run the given action (branch or tag) across all repos for an SDK type.
 
     Args:
-        action: "branch" or "tag"
+        action: "branch", "tag", or "switch"
         sdk: "rtos" or "canmv"
         name: the branch or tag name
         remote: git remote name
@@ -331,8 +384,14 @@ def process_repos(action, sdk, name, remote, dry_run, repo_root):
         repo_root: absolute path to the workspace root
     """
     repos = resolve_repos(action, sdk)
-    op_fn = create_branch if action == "branch" else create_tag
-    op_label = "branching" if action == "branch" else "tagging"
+    if action == "branch":
+        op_fn = create_branch
+    elif action == "tag":
+        op_fn = create_tag
+    else:
+        op_fn = switch_to_branch
+    op_label = {"branch": "branching", "tag": "tagging", "switch": "switching"}[action]
+    op_past = {"branch": "branched", "tag": "tagged", "switch": "switched"}[action]
 
     total = len(repos)
     success = 0
@@ -414,7 +473,7 @@ def process_repos(action, sdk, name, remote, dry_run, repo_root):
     if skipped:
         print(f"\n{YELLOW}⚠️  {success} succeeded, {skipped} skipped.{NC}")
         return 0
-    print(f"\n{GREEN}🎉 All {success} project(s) {op_label.rstrip('ing')}ed successfully!{NC}")
+    print(f"\n{GREEN}🎉 All {success} project(s) {op_past} successfully!{NC}")
     return 0
 
 # ─── CLI ──────────────────────────────────────────────────────────────────────
@@ -427,12 +486,14 @@ def main():
             examples:
               %(prog)s branch rtos v0.8
               %(prog)s branch canmv v1.7 --dry-run
+              %(prog)s switch rtos v0.8
+              %(prog)s switch canmv v1.7
               %(prog)s tag rtos v0.8
               %(prog)s tag canmv v1.7 --remote origin
         """),
     )
     parser.add_argument(
-        "action", choices=["branch", "tag"], help="operation to perform"
+        "action", choices=["branch", "tag", "switch"], help="operation to perform"
     )
     parser.add_argument(
         "sdk", choices=list(BRANCH_REPOS), help="SDK type (determines repo set)"
@@ -452,10 +513,10 @@ def main():
     args = parser.parse_args()
 
     # Derive the ref name
-    if args.action == "branch":
-        name = f"release/{args.sdk}-{args.version}"
-    else:
+    if args.action == "tag":
         name = f"{args.sdk}-{args.version}"
+    else:
+        name = f"release/{args.sdk}-{args.version}"
 
     # Resolve repo root: script lives in .github/, root is one level up
     script_dir = os.path.dirname(os.path.abspath(__file__))
