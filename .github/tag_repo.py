@@ -70,7 +70,11 @@ def tag_exists_remote(tag, remote, cwd):
 
 def get_last_tag(cwd):
     try:
-        return run(["git", "describe", "--tags", "--abbrev=0"], cwd)
+        output = run(
+            ["git", "tag", "--sort=-version:refname", "--list", "v*"], cwd
+        )
+        tags = output.splitlines()
+        return tags[0] if tags else None
     except subprocess.CalledProcessError:
         return None
 

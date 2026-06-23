@@ -122,10 +122,14 @@ def tag_exists_remote(tag, remote, cwd):
 
 def get_last_tag(cwd, match=None):
     try:
-        cmd = ["git", "describe", "--tags", "--abbrev=0"]
+        cmd = ["git", "tag", "--sort=-version:refname"]
         if match:
-            cmd += ["--match", match]
-        return run(cmd, cwd)
+            cmd += ["--list", match]
+        else:
+            cmd += ["--list", "*-v*"]
+        output = run(cmd, cwd)
+        tags = output.splitlines()
+        return tags[0] if tags else None
     except subprocess.CalledProcessError:
         return None
 
