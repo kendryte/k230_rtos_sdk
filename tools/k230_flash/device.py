@@ -194,56 +194,72 @@ def _enter_bootloader_via_serial(port: str) -> bool:
 
     The port is intentionally NOT closed so DTR/RTS remain asserted
     while the device reboots into bootloader mode.
+
+    On macOS, IOKit does not support Mark parity at open() time,
+    but accepts reconfiguration after the port is opened with
+    standard params. We open 8N1 first, then reconfigure to the
+    magic params (300 baud, 5 data bits, 2 stop bits) via the
+    port's property setters before sending the break sequence.
     """
     print(f"Attempting to switch device on {port} to Bootloader mode (serial)...")
 
     try:
         ser = _serial.Serial(
             port=port,
-            baudrate=300,
-            bytesize=_serial.FIVEBITS,
-            parity=_serial.PARITY_MARK,
-            stopbits=_serial.STOPBITS_TWO,
+            baudrate=1200,
+            bytesize=_serial.EIGHTBITS,
+            parity=_serial.PARITY_NONE,
+            stopbits=_serial.STOPBITS_ONE,
             timeout=1,
             xonxoff=False,
             rtscts=False,
             dsrdtr=False,
         )
-
-        if not ser.is_open:
-            raise _serial.SerialException(f"Failed to open serial port {port}")
-
-        # Give the kernel time to finish SET_LINE_CODING + auto DTR/RTS
-        time.sleep(0.2)
-
-        # Force DTR/RTS low — kernel may have de-asserted them during
-        # line reconfiguration; this creates a clean baseline.
-        ser.dtr = False
-        ser.rts = False
-        time.sleep(0.1)
-
-        # Send break (sets send_break_flag in firmware)
-        ser.send_break()
-        time.sleep(0.2)
-
-        # Assert DTR (sets last_dtr_state in firmware)
-        ser.dtr = True
-        time.sleep(0.1)
-
-        # Assert RTS — rising edge triggers magic-reboot check in firmware
-        ser.rts = True
-        time.sleep(0.2)
-
-        print("  Signal sent. Keeping port open for device reboot.")
-        # NOTE: do NOT close the port. Closing would de-assert DTR/RTS
-        # and potentially interfere with the device's reboot sequence.
-        return True
-    except _serial.SerialException as e:
-        print(f"  Warning: Failed to open or communicate on {port}: {e}")
+    except (ValueError, _serial.SerialException) as e:
+        print(f"  Warning: Failed to open serial port {port}: {e}")
         return False
-    except OSError as e:
-        print(f"  Warning: OS error accessing {port}: {e}")
+
+    # Reconfigure to magic params — macOS IOKit rejects these at
+    # open() but accepts them via property setters on an open port.
+    # This sends SET_LINE_CODING to the device, which is what the
+    # bootloader entry sequence requires.
+    try:
+        ser.baudrate = 300
+        ser.bytesize = _serial.FIVEBITS
+        ser.stopbits = _serial.STOPBITS_TWO
+    except (ValueError, _serial.SerialException) as e:
+        print(f"  Warning: Failed to reconfigure serial params on {port}: {e}")
+        ser.close()
         return False
+
+    if not ser.is_open:
+        raise _serial.SerialException(f"Failed to open serial port {port}")
+
+    # Give the kernel time to finish SET_LINE_CODING + auto DTR/RTS
+    time.sleep(0.2)
+
+    # Force DTR/RTS low — kernel may have de-asserted them during
+    # line reconfiguration; this creates a clean baseline.
+    ser.dtr = False
+    ser.rts = False
+    time.sleep(0.1)
+
+    # Send break (sets send_break_flag in firmware)
+    ser.send_break()
+    time.sleep(0.2)
+
+    # Assert DTR (sets last_dtr_state in firmware)
+    ser.dtr = True
+    time.sleep(0.1)
+
+    # Assert RTS — rising edge triggers magic-reboot check in firmware
+    ser.rts = True
+    time.sleep(0.2)
+
+    print("  Signal sent. Keeping port open for device reboot.")
+    # NOTE: do NOT close the port. Closing would de-assert DTR/RTS
+    # and potentially interfere with the device's reboot sequence.
+    return True
 
 
 def wait_for_bootloader(vid: int, pid: int, timeout: int) -> bool:
