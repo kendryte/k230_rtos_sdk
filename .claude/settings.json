@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make)",
+      "Bash(ls /home/xel/.claude/projects/-home-xel-work-canmv-k230/memory/ 2>/dev/null; cat /home/xel/.claude/projects/-home-xel-work-canmv-k230/memory/MEMORY.md 2>/dev/null | head)",
+      "Read(//home/xel/.claude/projects/-home-xel-work-canmv-k230/memory/**)",
+      "Bash(make clean *)",
+      "Bash(nm /home/xel/work/canmv_k230/output/k230_canmv_01studio_defconfig/rtsmart/libs/3rd-party/lib/libwebsockets.a)",
+      "Bash(cd /home/xel/work/canmv_k230/src/rtsmart/rtsmart/kernel/rt-thread; echo \"=== how is syscall table indexed? \\(numbered or by name\\) ===\"; grep -n \"SYSCALL_SIGN\\\\|syscall_table\\\\|__NR_\\\\|lwp_get_sys_api\\\\|syscall_func\" components/lwp/lwp_syscall.c | head; echo; echo \"=== pipe2 anywhere in kernel/musl headers used by build ===\"; grep -rn \"pipe2\" components/lwp/ 2>/dev/null | head; echo \"=== check the toolchain musl: does pipe\\(\\) use SYS_pipe2? ===\"; grep -rn \"SYS_pipe\\\\b\\\\|SYS_pipe2\\\\|__NR_pipe\" /home/xel/.kendryte/k230_toolchains/*/sysroot/usr/include/bits/syscall.h 2>/dev/null | head)",
+      "Read(//home/xel/.kendryte/k230_toolchains/**)"
+    ]
+  }
+}

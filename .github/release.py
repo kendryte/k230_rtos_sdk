@@ -5,6 +5,7 @@ Unified release tool for K230 SDK projects.
 Usage:
     release.py branch <rtos|canmv> <version> [--remote NAME] [--dry-run]
     release.py switch <rtos|canmv> <version> [--remote NAME] [--dry-run]
+    release.py switch default                  [--remote NAME] [--dry-run]
     release.py tag    <rtos|canmv> <version> [--remote NAME] [--dry-run]
 
 Examples:
@@ -12,6 +13,7 @@ Examples:
     release.py branch canmv v1.7         # create release/canmv-v1.7 branches + manifest
     release.py switch rtos v0.8          # ensure all repos on release/rtos-v0.8
     release.py switch canmv v1.7         # ensure all repos on release/canmv-v1.7
+    release.py switch default            # switch all repos to default branches (main / canmv_k230)
     release.py tag rtos v0.8             # create v0.8 tags on rtos repos
     release.py tag canmv v1.7 --dry-run  # preview tag creation
 """
@@ -46,10 +48,24 @@ CANMV_EXTRA_REPOS = [
     # ("src/canmv/resources/ybsdcard", "canmv-k230/ybsdcard"),
 ]
 
+# Default: all repos combined, each with its own default branch
+DEFAULT_REPOS = SHARED_REPOS + RTOS_EXTRA_REPOS + CANMV_EXTRA_REPOS
+
+DEFAULT_BRANCH_MAP = {
+    ".": "main",
+    "src/uboot/uboot": "main",
+    "src/rtsmart/rtsmart": "main",
+    "src/rtsmart/libs": "main",
+    "src/rtsmart/mpp": "main",
+    "src/rtsmart/examples": "main",
+    "src/canmv": "canmv_k230",
+}
+
 # Branch: both SDKs include shared repos (unique branch names per SDK)
 BRANCH_REPOS = {
     "rtos": SHARED_REPOS + RTOS_EXTRA_REPOS,
     "canmv": SHARED_REPOS + CANMV_EXTRA_REPOS,
+    "default": DEFAULT_REPOS,
 }
 
 # Tag: canmv excludes k230_rtos_sdk (it gets the rtos version tag, not canmv)
@@ -434,8 +450,11 @@ def process_repos(action, sdk, name, remote, dry_run, repo_root):
 
         print(f"📦 {abs_path}")
 
+        # Resolve per-repo branch name when name is a dict (default switch)
+        branch_name = name.get(rel_path, "main") if isinstance(name, dict) else name
+
         try:
-            op_fn(abs_path, name, remote, dry_run=dry_run)
+            op_fn(abs_path, branch_name, remote, dry_run=dry_run)
             print(f"\n{GREEN}✅ {repo_name} — success{NC}\n")
             success += 1
         except subprocess.CalledProcessError as exc:
@@ -492,6 +511,7 @@ def main():
               %(prog)s branch canmv v1.7 --dry-run
               %(prog)s switch rtos v0.8
               %(prog)s switch canmv v1.7
+              %(prog)s switch default
               %(prog)s tag rtos v0.8
               %(prog)s tag canmv v1.7 --remote origin
         """),
@@ -502,7 +522,9 @@ def main():
     parser.add_argument(
         "sdk", choices=list(BRANCH_REPOS), help="SDK type (determines repo set)"
     )
-    parser.add_argument("version", help="version string, e.g. v0.8")
+    parser.add_argument(
+        "version", nargs="?", default="", help="version string, e.g. v0.8 (not needed for 'default' SDK)"
+    )
     parser.add_argument(
         "--remote",
         default=DEFAULT_REMOTE,
@@ -516,8 +538,17 @@ def main():
 
     args = parser.parse_args()
 
-    # Derive the ref name
-    if args.action == "tag":
+    # Validate: version is required for non-default SDKs
+    if args.sdk != "default" and not args.version:
+        parser.error(f"version is required for SDK '{args.sdk}'")
+
+    # Derive the ref name (or per-repo branch map for default)
+    if args.sdk == "default":
+        if args.action != "switch":
+            print(f"{RED}Error: 'default' SDK only supports 'switch' action{NC}")
+            sys.exit(1)
+        name = DEFAULT_BRANCH_MAP
+    elif args.action == "tag":
         name = f"{args.sdk}-{args.version}"
     else:
         name = f"release/{args.sdk}-{args.version}"
