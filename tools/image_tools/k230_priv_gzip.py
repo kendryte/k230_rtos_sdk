@@ -236,6 +236,8 @@ class K230PrivGzip:
                 compression_successful = True
                 break # Exit the loop after successful compression
 
+            except K230PrivGzipError as e:
+                logging.warning(f"Compression failed with level -n{level}. Trying next level. Error: {e}")
             except subprocess.CalledProcessError as e:
                 logging.warning(f"Compression failed with level -n{level}. Trying next level. Error: {e.stderr.decode() if e.stderr else e}")
             except Exception as e:

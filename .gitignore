@@ -42,3 +42,7 @@ src/uboot/loader/
 
 AGENTS.md
 skills/
+
+.claude
+.codex
+.copilot
