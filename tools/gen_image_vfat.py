@@ -18,6 +18,7 @@ def generate_bin_vfat(output_path):
 image bin.vfat {
     vfat {
         label = "BIN"
+        extraargs = " -F 16 -s 64 "
     }
     size = 10M
     mountpoint = "bin"
