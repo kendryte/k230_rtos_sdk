@@ -26,7 +26,9 @@ get_repo_version_tag()
 
 fetch_repo_tags()
 {
-    git fetch --tags > /dev/null 2>&1 || true
+    if [ "$CI" = "true" ] || [ "$GITLAB_CI" = "true" ] || [ "$GITHUB_ACTIONS" = "true" ] || [ -n "$GITHUB_ACTION" ]; then
+        git fetch --tags > /dev/null 2>&1 || true
+    fi
 }
 
 gen_version_file()
@@ -40,7 +42,7 @@ gen_version_file()
     pushd "${SDK_SRC_ROOT_DIR}" > /dev/null
         local commitid="unknown"
         local last_tag="unknown"
-        git rev-parse --short HEAD  &&  commitid=$(git rev-parse --short HEAD)
+        commitid=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
         fetch_repo_tags
         last_tag=$(get_repo_version_tag)
         sdk_ver="${last_tag}-$(date "+%Y%m%d-%H%M%S")-$(whoami)-$(hostname)-${commitid}"
@@ -50,7 +52,7 @@ gen_version_file()
         pushd "${SDK_CANMV_SRC_DIR}" > /dev/null
             local commitid="unknown"
             local last_tag="unknown"
-            git rev-parse --short HEAD  &&  commitid=$(git rev-parse --short HEAD)
+            commitid=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
             fetch_repo_tags
             last_tag=$(get_repo_version_tag)
             canmv_ver="${last_tag}-$(date "+%Y%m%d-%H%M%S")-$(whoami)-$(hostname)-${commitid}"
