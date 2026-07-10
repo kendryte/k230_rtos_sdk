@@ -22,11 +22,30 @@
 
 #include "genimage.h"
 
+static char *sq_escape(const char *s)
+{
+	size_t n = strlen(s);
+	char *out = malloc(4 * n + 3);
+	char *p = out;
+	*p++ = '\'';
+	while (*s) {
+		if (*s == '\'') {
+			*p++ = '\''; *p++ = '\\'; *p++ = '\''; *p++ = '\'';
+		} else {
+			*p++ = *s;
+		}
+		s++;
+	}
+	*p++ = '\''; *p = '\0';
+	return out;
+}
+
 static int fip_generate(struct image *image)
 {
 	struct partition *part;
 	char *args = strdup("");
 	const char *extraargs = cfg_getstr(image->imagesec, "extraargs");
+	char *quoted;
 	int ret;
 
 	list_for_each_entry(part, &image->partitions, list) {
@@ -34,12 +53,16 @@ static int fip_generate(struct image *image)
 		char *oldargs;
 
 		oldargs = args;
-		xasprintf(&args, "%s --%s '%s'", args, part->name, imageoutfile(child));
+		quoted = sq_escape(imageoutfile(child));
+		xasprintf(&args, "%s --%s %s", args, part->name, quoted);
+		free(quoted);
 		free(oldargs);
 	}
 
-	ret = systemp(image, "%s create %s %s '%s'", get_opt("fiptool"),
-		      args, extraargs, imageoutfile(image));
+	quoted = sq_escape(imageoutfile(image));
+	ret = systemp(image, "%s create %s %s %s", get_opt("fiptool"),
+		      args, extraargs, quoted);
+	free(quoted);
 
 	free(args);
 
