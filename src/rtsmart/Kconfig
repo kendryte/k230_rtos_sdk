@@ -72,6 +72,15 @@ menu "RT-Smart Configuration"
                     partition aligned to 1 GiB.
                     Set it to 0 to start immediately after the previous
                     partition.
+
+            config RT_AUTO_RESIZE_PARTITION_ALWAYS
+                bool "Always create and format the data partition"
+                default n
+                help
+                    Automatically create the data partition and format it when
+                    /data cannot be mounted. This does not require
+                    /bin/config.txt.
+                    Formatting an existing partition destroys its contents.
         endif
 
     menu "RT-Thread Smart System Features"
