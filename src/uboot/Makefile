@@ -22,8 +22,8 @@ else
 	@echo "Building U-Boot from source"
 	@cp $(SDK_SRC_ROOT_DIR)/include/generated/autoconf.h $(SDK_UBOOT_SRC_DIR)/uboot/board/kendryte/common/sdk_autoconf.h
 	@python3 $(SDK_TOOLS_DIR)/gen_uboot_secure_header.py --config $(SDK_SRC_ROOT_DIR)/.config --output $(SDK_UBOOT_SRC_DIR)/uboot/board/kendryte/common/secure_boot_config_autogen.h
-	@$(MAKE) -C uboot $(UBOOT_DEFCONFIG) ARCH=riscv O=$(SDK_UBOOT_BUILD_DIR) || exit $?;
-	@$(MAKE) -C $(SDK_UBOOT_BUILD_DIR) ARCH=riscv || exit $?;
+	@$(MAKE) -C uboot $(UBOOT_DEFCONFIG) ARCH=riscv O=$(SDK_UBOOT_BUILD_DIR)
+	@$(MAKE) -C $(SDK_UBOOT_BUILD_DIR) ARCH=riscv
 endif
 	@python3 $(SDK_TOOLS_DIR)/gen_otp_config.py --config $(SDK_SRC_ROOT_DIR)/.config -o $(SDK_BUILD_IMAGES_DIR)/uboot/otp_config.json --bin-output $(SDK_BUILD_IMAGES_DIR)/uboot/otp_data.kdimg --lock-output $(SDK_BUILD_IMAGES_DIR)/uboot/otp_key_lock.kdimg --full-output $(SDK_BUILD_IMAGES_DIR)/uboot/otp_full.kdimg
 
@@ -39,11 +39,11 @@ distclean: clean
 
 menuconfig: clean
 	@export ARCH=riscv; \
-	make -C uboot $(UBOOT_DEFCONFIG) || exit $?; \
-	make -C uboot menuconfig || exit $?; \
-	make -C uboot savedefconfig || exit $?; \
+	make -C uboot $(UBOOT_DEFCONFIG) || exit $$?; \
+	make -C uboot menuconfig || exit $$?; \
+	make -C uboot savedefconfig || exit $$?; \
 	cp uboot/defconfig $(SDK_UBOOT_SRC_DIR)/uboot/configs/$(UBOOT_DEFCONFIG); \
-	make -C uboot distclean || exit $?;
+	make -C uboot distclean
 
 .PHONY: arduino-sdk arduino-sdk-clean arduino-sdk-distclean
 arduino-sdk:

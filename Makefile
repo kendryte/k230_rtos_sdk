@@ -10,13 +10,13 @@ ifeq ($(strip $(filter $(MAKECMDGOALS),clean distclean list_def list-def dl_tool
 $(SDK_SRC_ROOT_DIR)/.config: $(KCONF)
 	$(call gen_kconfig,$(SDK_CANMV_SRC_DIR),canmv)
 	$(call gen_kconfig,$(SDK_RTSMART_SRC_DIR)/examples,rtt_examples)
-	@make -C $(SDK_APPS_SRC_DIR) gen_kconfig || exit $?
+	@make -C $(SDK_APPS_SRC_DIR) gen_kconfig
 
-	@$(KCONF) --defconfig $(SDK_SRC_ROOT_DIR)/configs/$(MK_LIST_DEFCONFIG) $(SDK_SRC_ROOT_DIR)/Kconfig || exit $?
+	@$(KCONF) --defconfig $(SDK_SRC_ROOT_DIR)/configs/$(MK_LIST_DEFCONFIG) $(SDK_SRC_ROOT_DIR)/Kconfig
 
 $(SDK_SRC_ROOT_DIR)/.config.old: $(SDK_SRC_ROOT_DIR)/.config
 	@cp -f $(SDK_SRC_ROOT_DIR)/.config $(SDK_SRC_ROOT_DIR)/.config.old
-	@$(KCONF) --syncconfig $(SDK_SRC_ROOT_DIR)/Kconfig || exit $?
+	@$(KCONF) --syncconfig $(SDK_SRC_ROOT_DIR)/Kconfig
 endif
 
 .PHONY: menuconfig
@@ -25,17 +25,17 @@ menuconfig: $(MCONF) $(SDK_SRC_ROOT_DIR)/.config
 
 	$(call gen_kconfig,$(SDK_CANMV_SRC_DIR),canmv)
 	$(call gen_kconfig,$(SDK_RTSMART_SRC_DIR)/examples,rtt_examples)
-	@make -C $(SDK_APPS_SRC_DIR) gen_kconfig || exit $?
+	@make -C $(SDK_APPS_SRC_DIR) gen_kconfig
 
-	@$(MCONF) $(SDK_SRC_ROOT_DIR)/Kconfig || exit $?
+	@$(MCONF) $(SDK_SRC_ROOT_DIR)/Kconfig
 
 .PHONY: savedefconfig
 savedefconfig: $(KCONF) $(SDK_SRC_ROOT_DIR)/.config
 	$(call gen_kconfig,$(SDK_CANMV_SRC_DIR),canmv)
 	$(call gen_kconfig,$(SDK_RTSMART_SRC_DIR)/examples,rtt_examples)
-	@make -C $(SDK_APPS_SRC_DIR) gen_kconfig || exit $?
+	@make -C $(SDK_APPS_SRC_DIR) gen_kconfig
 
-	@$(KCONF) --savedefconfig=$(SDK_SRC_ROOT_DIR)/configs/$(MK_LIST_DEFCONFIG) $(SDK_SRC_ROOT_DIR)/Kconfig || exit $?
+	@$(KCONF) --savedefconfig=$(SDK_SRC_ROOT_DIR)/configs/$(MK_LIST_DEFCONFIG) $(SDK_SRC_ROOT_DIR)/Kconfig
 
 .PHONY: .autoconf
 .autoconf: $(SDK_SRC_ROOT_DIR)/.config.old

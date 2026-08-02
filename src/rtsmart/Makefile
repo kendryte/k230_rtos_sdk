@@ -45,8 +45,8 @@ SHELL := bash
 	fi; \
 	rm -rf rtconfig.h; \
 	cp configs/${RTSMART_DEFCONFIG} .config; \
-	python3 $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/rt-thread/tools/defconfig.py --kconfig Kconfig .config || exit $?; \
-	scons --useconfig=.config  || exit $?; \
+	python3 $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/rt-thread/tools/defconfig.py --kconfig Kconfig .config || exit $$?; \
+	scons --useconfig=.config  || exit $$?; \
 	popd; \
 	touch .parse_config
 
@@ -54,7 +54,7 @@ SHELL := bash
 kernel: .parse_config
 	@$(SDK_TOOLS_DIR)/gen_verinfo_h.sh $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3/sdk_version.h
 
-	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/kernel all || exit $?;
+	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/kernel all
 
 	@export RTT_CC=gcc; \
 	export RTT_CC_PREFIX=$(CROSS_COMPILE_PREFIX); \
@@ -64,23 +64,23 @@ kernel: .parse_config
 	export MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp; \
 	pushd $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3; \
 	rm -f rtthread.{elf,bin}; \
-	scons -j$(NCPUS) || exit $?; \
+	scons -j$(NCPUS) || exit $$?; \
 	cp rtthread.bin ${SDK_BUILD_IMAGES_DIR}/rtsmart; \
 	popd;
 
 .PHONY: mpp
 mpp: .parse_config
-	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/userapps/src all || exit $?;
-	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/middleware/src all || exit $?;
+	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/userapps/src all
+	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/middleware/src all
 
 .PHONY: libs
 libs: mpp
-	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/libs all || exit $?;
+	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/libs all
 
 .PHONY: examples
 examples: libs
 ifeq ($(CONFIG_RTT_ENABLE_BUILD_EXAMPLES),y)
-	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/examples all || exit $?;
+	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/examples all
 endif
 
 .PHONY: kernel-clean
@@ -93,28 +93,28 @@ kernel-clean:
 	export MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp; \
 	pushd $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3; \
 	rm -f rtthread.elf .config .config.old k_autoconf_comm.h link_stacksize.lds link.lds rtconfig.h; \
-	scons -c || exit $?; \
+	scons -c || exit $$?; \
 	popd; \
 	rm -rf ${SDK_BUILD_IMAGES_DIR}/rtsmart;
 
 .PHONY: mpp-clean
 mpp-clean:
-	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/kernel clean || exit $?; 
-	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/userapps/src clean || exit $?;
-	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/middleware/src clean || exit $?;
+	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/kernel clean
+	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/userapps/src clean
+	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/middleware/src clean
 
 .PHONY: libs-clean
 libs-celan:
-	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/libs clean || exit $?;
+	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/libs clean
 
 .PHONY: examples-clean
 examples-clean:
 ifeq ($(CONFIG_RTT_ENABLE_BUILD_EXAMPLES),y)
-	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/examples clean || exit $?;
+	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/examples clean
 endif
 
 all: .parse_config kernel mpp libs examples
-	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/userapps/src/sensor install_isp_configs || exit $$?;
+	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/userapps/src/sensor install_isp_configs
 
 ifeq ($(CONFIG_RTT_ENABLE_BUILD_EXAMPLES),y)
 	@echo "Copy rtsmart examples."
@@ -142,10 +142,10 @@ menuconfig:
 	pushd $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3; \
 	rm -rf rtconfig.h .config .config.old; \
 	cp configs/${RTSMART_DEFCONFIG} .config; \
-	python3 $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/rt-thread/tools/defconfig.py --kconfig Kconfig .config || exit $?; \
-	scons --useconfig=.config || exit $?; \
-	scons --menuconfig || exit $?; \
-	python3 $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/rt-thread/tools/savedefconfig.py --kconfig Kconfig --output configs/${RTSMART_DEFCONFIG} .config || exit $?; \
+	python3 $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/rt-thread/tools/defconfig.py --kconfig Kconfig .config || exit $$?; \
+	scons --useconfig=.config || exit $$?; \
+	scons --menuconfig || exit $$?; \
+	python3 $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/rt-thread/tools/savedefconfig.py --kconfig Kconfig --output configs/${RTSMART_DEFCONFIG} .config || exit $$?; \
 	popd;
 
 .PHONY: arduino-sdk arduino-sdk-clean arduino-sdk-distclean
@@ -171,7 +171,7 @@ arduino-sdk:
 	@python3 $(SDK_TOOLS_DIR)/merge_libs.py \
 		--toolchain-prefix $(CROSS_COMPILE) \
 		--input $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-rtsmart_hal \
-		--output $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib/librtsmart_hal.a || exit $?;
+		--output $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib/librtsmart_hal.a
 	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-rtsmart_hal
 
 	# Copy mpp include and libraries
@@ -189,7 +189,7 @@ arduino-sdk:
 	@python3 $(SDK_TOOLS_DIR)/merge_libs.py \
 		--toolchain-prefix $(CROSS_COMPILE) \
 		--input $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-mpp \
-		--output $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib/libmpp.a || exit $?;
+		--output $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib/libmpp.a
 	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-mpp
 
 	# Copy opencv include and libraries
