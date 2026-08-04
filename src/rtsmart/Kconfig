@@ -87,6 +87,13 @@ menu "RT-Smart Configuration"
         config ENABLE_DUAL_CDC_PORT
             bool "Enable dual CDC ACM ports"
             default n
+            help
+                Enable a second CDC ACM interface for the protocol port.
+
+                Each CDC function uses one bidirectional bulk endpoint number
+                and one interrupt IN endpoint number. K230 provides six
+                non-control bidirectional endpoint numbers (EP1 through EP6),
+                so dual CDC cannot be combined with HID Serial + CDC + MTP.
 
         config ENABLE_NETWORK_RT_LAN_OVER_USB
             bool "Enable Network RT-Thread Lan(eth) over USB"

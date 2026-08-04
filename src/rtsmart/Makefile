@@ -8,6 +8,12 @@ include $(SDK_TOOLS_DIR)/toolchain_rtsmart.mk
 
 include $(SDK_SRC_ROOT_DIR)/.config
 
+# Make the SDK-level CDC selection visible to the RT-Smart Kconfig pass.  The
+# USB function choice lives in the kernel Kconfig, while dual CDC is shared by
+# the kernel and CanMV user space through the SDK Kconfig.
+CANMV_USB_DUAL_CDC_PORT := $(if $(filter y,$(CONFIG_ENABLE_DUAL_CDC_PORT)),y,n)
+export CANMV_USB_DUAL_CDC_PORT
+
 ifneq ($(shell [ -d ${SDK_BUILD_IMAGES_DIR}/rtsmart ] && echo 1 || echo 0),1)
 $(shell mkdir -p ${SDK_BUILD_IMAGES_DIR}/rtsmart)
 endif
