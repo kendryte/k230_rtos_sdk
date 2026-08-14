@@ -12,7 +12,7 @@ menu "Board Configuration"
         default BOARD_K230_CANMV
 
         config BOARD_K230_CANMV
-            bool "K230 CanMV, Onboard 512M"
+            bool "K230 CanMV V1.0 or V1.1, Onboard 512M"
             select BOARD_CHIP_K230
 
         config BOARD_K230_CANMV_V3P0
@@ -20,7 +20,7 @@ menu "Board Configuration"
             select BOARD_CHIP_K230
 
         config BOARD_K230_CANMV_LCKFB
-            bool "K230 CanMV LCKFB, Onboard 1GiB LPDDR4"
+            bool "K230 CanMV LushanPi, Onboard 1GiB LPDDR4"
             select BOARD_CHIP_K230
 
         config BOARD_K230_CANMV_YAHBOOM
@@ -34,7 +34,7 @@ menu "Board Configuration"
         config BOARD_K230_CANMV_HIWONDER
             bool "K230 CanMV Hiwonder, Onboard 1GiB LPDDR4"
             select BOARD_CHIP_K230
-            
+
         config BOARD_K230_CANMV_WONDERMK
 	        bool "K230 CanMV WonderMK, Onboard 1GiB LPDDR4"
 	        select BOARD_CHIP_K230
@@ -60,11 +60,11 @@ menu "Board Configuration"
             select BOARD_CHIP_K230D
 
         config BOARD_K230_CANMV_DONGSHANPI
-            bool "K230 CanMV dongshanpi, Onboard 512MiB/1GiB LPDDR3"
+            bool "K230 CanMV DongshanPi, Onboard 512MiB/1GiB LPDDR3"
             select BOARD_CHIP_K230
 
         config BOARD_K230_CANMV_RTT_EVB
-            bool "K230 CanMV rtt evb, Onboard 512MiB/1GiB LPDDR3"
+            bool "K230 CanMV RTT EVB, Onboard 512MiB/1GiB LPDDR3"
             select BOARD_CHIP_K230
 
         config BOARD_K230_AIHARDWARE
@@ -84,23 +84,23 @@ menu "Board Configuration"
             select BOARD_CHIP_K230D
 
         config BOARD_K230D_CANMV_LABPLUS_AI_CAMERA
-            bool "K230D CanMV LabPlus Ai Camera"
+            bool "K230D CanMV LabPlus Ai Camera, SiP 128MiB LPDDR4"
             select BOARD_CHIP_K230D
 
         config BOARD_K230D_CANMV_LABPLUS_AI_CAMERA_V2
-            bool "K230D CanMV LabPlus Ai Camera V2"
+            bool "K230D CanMV LabPlus Ai Camera V2, SiP 128MiB LPDDR4"
             select BOARD_CHIP_K230D
 
         config BOARD_K230_LABPLUS_1956
-            bool "K230 CanMV LabPlus 1956"
+            bool "K230 CanMV LabPlus 1956, Onboard 1GiB LPDDR4"
             select BOARD_CHIP_K230
 
         config BOARD_K230_CANMV_MRT
-            bool "K230 CanMV MRT"
+            bool "K230 CanMV MRT, Onboard 1GiB LPDDR4"
             select BOARD_CHIP_K230
 
         config BOARD_K230D_CANMV_LUSHANPI_LITE
-            bool "K230 CanMV Lushanpi Lite"
+            bool "K230D CanMV LushanPi Lite, SiP 128MiB LPDDR4"
             select BOARD_CHIP_K230D
 
     endchoice

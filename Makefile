@@ -80,12 +80,16 @@ list_def:
 	@echo "\033[31mWarning: 'make list_def' is deprecated and will be removed in the future.\033[0m"
 	@echo "\033[31mPlease use 'make list-def' instead.\033[0m"
 	@echo "Available configs:"
-	@ls $(SDK_SRC_ROOT_DIR)/configs/ | awk -v current="$(MK_LIST_DEFCONFIG)" '{if ($$0 == current) print NR, "[*]", $$0; else print NR, "[ ]", $$0}'
+	@awk -v current="$(MK_LIST_DEFCONFIG)" -f $(SDK_TOOLS_DIR)/list_defconfigs.awk \
+		$(SDK_BOARDS_DIR)/Kconfig $(SDK_SRC_ROOT_DIR)/configs/defconfig_info \
+		$(SDK_SRC_ROOT_DIR)/configs/*_defconfig
 
 .PHONY: list-def
 list-def:
 	@echo "Available configs:"
-	@ls $(SDK_SRC_ROOT_DIR)/configs/ | awk -v current="$(MK_LIST_DEFCONFIG)" '{if ($$0 == current) print NR, "[*]", $$0; else print NR, "[ ]", $$0}'
+	@awk -v current="$(MK_LIST_DEFCONFIG)" -f $(SDK_TOOLS_DIR)/list_defconfigs.awk \
+		$(SDK_BOARDS_DIR)/Kconfig $(SDK_SRC_ROOT_DIR)/configs/defconfig_info \
+		$(SDK_SRC_ROOT_DIR)/configs/*_defconfig
 
 .PHONY: uboot uboot-clean uboot-distclean uboot-menuconfig
 uboot: prepare
