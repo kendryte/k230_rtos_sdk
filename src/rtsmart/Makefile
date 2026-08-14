@@ -85,7 +85,7 @@ libs: mpp
 
 .PHONY: examples
 examples: libs
-ifeq ($(CONFIG_RTT_ENABLE_BUILD_EXAMPLES),y)
+ifeq ($(CONFIG_RTSMART_ENABLE_BUILD_EXAMPLES),y)
 	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/examples all
 endif
 
@@ -110,19 +110,19 @@ mpp-clean:
 	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/middleware/src clean
 
 .PHONY: libs-clean
-libs-celan:
+libs-clean:
 	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/libs clean
 
 .PHONY: examples-clean
 examples-clean:
-ifeq ($(CONFIG_RTT_ENABLE_BUILD_EXAMPLES),y)
+ifeq ($(CONFIG_RTSMART_ENABLE_BUILD_EXAMPLES),y)
 	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/examples clean
 endif
 
 all: .parse_config kernel mpp libs examples
 	@$(MAKE) -C $(SDK_RTSMART_SRC_DIR)/mpp/userapps/src/sensor install_isp_configs
 
-ifeq ($(CONFIG_RTT_ENABLE_BUILD_EXAMPLES),y)
+ifeq ($(CONFIG_RTSMART_ENABLE_BUILD_EXAMPLES),y)
 	@echo "Copy rtsmart examples."
 	$(call sync_dir, $(SDK_RTSMART_SRC_DIR)/examples/elf/, $(SDK_BUILD_IMAGES_DIR)/sdcard/app/examples/)
 endif
@@ -130,7 +130,7 @@ endif
 	@echo "Generate ${SDK_BUILD_IMAGES_DIR}/bin/config.txt"
 	@$(SDK_SRC_ROOT_DIR)/src/rtsmart/gen_config
 
-clean: mpp-clean kernel-clean libs-celan examples-clean
+clean: mpp-clean kernel-clean libs-clean examples-clean
 	@rm -rf .parse_config
 	@rm -rf ${SDK_BUILD_IMAGES_DIR}/rtsmart
 
