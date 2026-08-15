@@ -206,9 +206,6 @@ arduino-sdk:
 	@cp -rf $(SDK_RTSMART_SRC_DIR)/mpp/userapps/api/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/mpp/api/
 	@cp -rf $(SDK_RTSMART_SRC_DIR)/mpp/userapps/lib/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-mpp/
 
-	# Remove vglite
-	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-mpp/libvg_lite.a
-	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-mpp/libvg_lite_util.a
 
 	@python3 $(SDK_TOOLS_DIR)/merge_libs.py \
 		--toolchain-prefix $(CROSS_COMPILE) \
