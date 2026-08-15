@@ -32,17 +32,23 @@ endif
 
 SHELL := bash
 
+RTSMART_DEFCONFIG_FILE := $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3/configs/$(RTSMART_DEFCONFIG)
+RTSMART_FIRMWARE_STAGING_DIR := $(SDK_RTSMART_BUILD_DIR)/firmware
+RTSMART_FIRMWARE_IMAGE_DIR := $(SDK_BUILD_IMAGES_DIR)/bin/firmware
+
 .PHONY: all clean distclean menuconfig
 
-.parse_config:
+.parse_config: $(RTSMART_DEFCONFIG_FILE)
 	@export RTT_CC=gcc; \
 	export RTT_CC_PREFIX=$(CROSS_COMPILE_PREFIX); \
 	export RTT_EXEC_PATH=$(CROSS_COMPILE_DIR); \
 	export RTSMART_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/rtsmart; \
 	export RTT_SDK_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR)/kernel; \
+	export RTSMART_FIRMWARE_STAGE_DIR=$(RTSMART_FIRMWARE_STAGING_DIR); \
 	export MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp; \
 	cp -f $(SDK_SRC_ROOT_DIR)/include/generated/autoconf.h $(SDK_RTSMART_SRC_DIR)/mpp/include/comm/k_autoconf_comm.h; \
 	cp -f $(SDK_SRC_ROOT_DIR)/include/generated/autoconf.h $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3/k_autoconf_comm.h; \
+	rm -rf $(RTSMART_FIRMWARE_STAGING_DIR); \
 	pushd $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3; \
 	if [ ! -f configs/${RTSMART_DEFCONFIG} ]; then \
 		echo "Error: Configuration file '${RTSMART_DEFCONFIG}' not found."; \
@@ -67,8 +73,10 @@ kernel: .parse_config
 	export RTT_EXEC_PATH=$(CROSS_COMPILE_DIR); \
 	export RTSMART_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/rtsmart; \
 	export RTT_SDK_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR)/kernel; \
+	export RTSMART_FIRMWARE_STAGE_DIR=$(RTSMART_FIRMWARE_STAGING_DIR); \
 	export MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp; \
 	pushd $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3; \
+	rm -rf "$(RTSMART_FIRMWARE_STAGING_DIR)"; \
 	rm -f rtthread.{elf,bin}; \
 	scons -j$(NCPUS) || exit $$?; \
 	cp rtthread.bin ${SDK_BUILD_IMAGES_DIR}/rtsmart; \
@@ -96,12 +104,13 @@ kernel-clean:
 	export RTT_EXEC_PATH=$(CROSS_COMPILE_DIR); \
 	export RTSMART_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/rtsmart; \
 	export RTT_SDK_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR)/kernel; \
+	export RTSMART_FIRMWARE_STAGE_DIR=$(RTSMART_FIRMWARE_STAGING_DIR); \
 	export MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp; \
 	pushd $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3; \
 	rm -f rtthread.elf .config .config.old k_autoconf_comm.h link_stacksize.lds link.lds rtconfig.h; \
 	scons -c || exit $$?; \
 	popd; \
-	rm -rf ${SDK_BUILD_IMAGES_DIR}/rtsmart;
+	rm -rf ${SDK_BUILD_IMAGES_DIR}/rtsmart $(RTSMART_FIRMWARE_STAGING_DIR);
 
 .PHONY: mpp-clean
 mpp-clean:
@@ -127,6 +136,14 @@ ifeq ($(CONFIG_RTSMART_ENABLE_BUILD_EXAMPLES),y)
 	$(call sync_dir, $(SDK_RTSMART_SRC_DIR)/examples/elf/, $(SDK_BUILD_IMAGES_DIR)/sdcard/app/examples/)
 endif
 
+	@if [ -d "$(RTSMART_FIRMWARE_STAGING_DIR)" ]; then \
+		echo "Install RT-Smart firmware to $(RTSMART_FIRMWARE_IMAGE_DIR)."; \
+		mkdir -p "$(RTSMART_FIRMWARE_IMAGE_DIR)"; \
+		rsync -aq --delete "$(RTSMART_FIRMWARE_STAGING_DIR)/" "$(RTSMART_FIRMWARE_IMAGE_DIR)/"; \
+	else \
+		rm -rf "$(RTSMART_FIRMWARE_IMAGE_DIR)"; \
+	fi
+
 	@echo "Generate ${SDK_BUILD_IMAGES_DIR}/bin/config.txt"
 	@$(SDK_SRC_ROOT_DIR)/src/rtsmart/gen_config
 
@@ -144,6 +161,7 @@ menuconfig:
 	export RTT_EXEC_PATH=$(CROSS_COMPILE_DIR); \
 	export RTSMART_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/rtsmart; \
 	export RTT_SDK_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR); \
+	export RTSMART_FIRMWARE_STAGE_DIR=$(RTSMART_FIRMWARE_STAGING_DIR); \
 	export MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp; \
 	pushd $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3; \
 	rm -rf rtconfig.h .config .config.old; \
