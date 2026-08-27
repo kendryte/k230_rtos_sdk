@@ -75,21 +75,30 @@ prepare: .autoconf rm_image
 
 	@echo "Apply $(@) success"
 
+define run_defconfig_selector
+	@selection_file="$$(mktemp "$${TMPDIR:-/tmp}/canmv-defconfig.XXXXXX")" || exit 1; \
+		trap 'rm -f "$$selection_file"' EXIT HUP INT TERM; \
+		$(PYTHON) $(SDK_TOOLS_DIR)/defconfig_selector.py \
+			--root "$(SDK_SRC_ROOT_DIR)" \
+			--current "$(MK_LIST_DEFCONFIG)" \
+			--type "$(TYPE)" \
+			--chip "$(CHIP)" \
+			--output "$$selection_file"; \
+		selector_status=$$?; \
+		if [ $$selector_status -ne 0 ]; then exit $$selector_status; fi; \
+		selected="$$(sed -n '1p' "$$selection_file")"; \
+		if [ -n "$$selected" ]; then $(MAKE) "$$selected"; fi
+endef
+
 .PHONY: list_def
 list_def:
 	@echo "\033[31mWarning: 'make list_def' is deprecated and will be removed in the future.\033[0m"
 	@echo "\033[31mPlease use 'make list-def' instead.\033[0m"
-	@echo "Available configs:"
-	@awk -v current="$(MK_LIST_DEFCONFIG)" -f $(SDK_TOOLS_DIR)/list_defconfigs.awk \
-		$(SDK_BOARDS_DIR)/Kconfig $(SDK_SRC_ROOT_DIR)/configs/defconfig_info \
-		$(SDK_SRC_ROOT_DIR)/configs/*_defconfig
+	$(run_defconfig_selector)
 
 .PHONY: list-def
 list-def:
-	@echo "Available configs:"
-	@awk -v current="$(MK_LIST_DEFCONFIG)" -f $(SDK_TOOLS_DIR)/list_defconfigs.awk \
-		$(SDK_BOARDS_DIR)/Kconfig $(SDK_SRC_ROOT_DIR)/configs/defconfig_info \
-		$(SDK_SRC_ROOT_DIR)/configs/*_defconfig
+	$(run_defconfig_selector)
 
 .PHONY: uboot uboot-clean uboot-distclean uboot-menuconfig
 uboot: prepare
@@ -231,7 +240,8 @@ help:
 	@echo "make xxxx_defconfig           -- Select board configure";
 	@echo "make menuconfig               -- Update configures";
 	@echo "make savedefconfig            -- After menuconfig, generate the default config, can update board defconfig";
-	@echo "make list-def                 -- List the configs supported";
+	@echo "make list-def                 -- Open the interactive defconfig selector";
+	@echo "make list-def TYPE=rtos CHIP=k230d -- Filter by firmware and chip";
 	@echo "make clean                    -- Clean build artifacts";
 	@echo "make distclean                -- Clean build artifacts";
 	@echo "make uboot                    -- Make uboot single";
@@ -259,5 +269,4 @@ endif
 	@echo "make ddr_test_<size>      	 -- Build DDR test image (sizes: 128, 512, 1024, 2048 MB)"
 	@echo "make arduino-sdk              -- Generate arduino-sdk";
 	@echo "make flash M=SDCARD           -- Download/flash firmware image to connected K230 device";
-	@echo "Supported board configs";
-	@ls $(SDK_SRC_ROOT_DIR)/configs/ | awk '{print "\t", $$0}'
+	@echo "Run make list-def to select a board configuration.";

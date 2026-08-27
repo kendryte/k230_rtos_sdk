@@ -71,13 +71,23 @@ repo sync
    make dl_toolchain
    ```
 
-2. **List all available configurations**:
+2. **Select a configuration** for your board:
 
    ```bash
-   make list_def
+   make list-def
    ```
 
-3. **Select a configuration** for your board:
+   The terminal selector groups configurations by firmware type and chip. Use
+   Left/Right to choose Arduino, CanMV, or RT-Smart, Tab to choose K230 or K230D,
+   Up/Down to choose a board, and Enter to apply the selected defconfig. You can
+   open a filtered selector with, for example,
+   `make list-def TYPE=rtos CHIP=k230d`.
+
+   In a non-interactive terminal, `make list-def` prints the grouped list without
+   changing the current configuration. The selector supports Python 2.7 and
+   Python 3; use `make list-def PYTHON=python2` when Python 2 is required.
+
+3. **Alternatively, apply a configuration directly**:
 
    ```bash
    make k230_canmv_defconfig  # Replace with the appropriate defconfig for your board
