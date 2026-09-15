@@ -1,9 +1,11 @@
 # Optional defconfig-specific descriptions. Format: defconfig|description
 k230_arduino_01studio_defconfig|K230 CanMV 01 Studio, Arduino firmware
 k230_arduino_lckfb_defconfig|K230 CanMV Lushanpi, Arduino firmware
+k230_arduino_rockbase_defconfig|K230 CanMV RockBase, Arduino firmware
 k230_canmv_01studio_emmc_defconfig|K230 CanMV 01 Studio, eMMC
 k230_canmv_dongshanpi_lpddr4_defconfig|K230 CanMV dongshanpi, LPDDR4
 k230_canmv_gt6700_camera_ext_defconfig|K230 CanMV GT6700, external camera
+k230_canmv_rockbase_defconfig|K230 CanMV RockBase, MicroPython firmware
 k230_canmv_v1p0p1_defconfig|K230 CanMV V1.0 or V1.1, AP6212 Wi-Fi or RTL8189FTV WiFi
 k230_rtos_01studio_defconfig|K230 CanMV 01 Studio, RT-Smart firmware
 k230_rtos_aihardware_defconfig|K230 AiHardWare, RT-Smart firmware
@@ -19,6 +21,7 @@ k230_rtos_dongshanpi_defconfig|K230 CanMV DongShanPi, RT-Smart firmware
 k230_rtos_gt6700_defconfig|K230 CanMV GT6700, RT-Smart firmware
 k230_rtos_hiwonder_defconfig|K230 CanMV Hiwonder, RT-Smart firmware
 k230_rtos_lushanpi_defconfig|K230 CanMV Lushanpi, RT-Smart firmware
+k230_rtos_rockbase_defconfig|K230 CanMV RockBase, RT-Smart firmware
 k230_rtos_rtt_evb_defconfig|K230 CanMV RTT EVB, RT-Smart firmware
 k230_rtos_v1p0p1_defconfig|K230 CanMV V1.0 or V1.1, RT-Smart firmware
 k230_rtos_v3p0_defconfig|K230 CanMV V3.0, RT-Smart firmware
