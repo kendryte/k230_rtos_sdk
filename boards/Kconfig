@@ -103,6 +103,10 @@ menu "Board Configuration"
             bool "K230D CanMV LushanPi Lite, SiP 128MiB LPDDR4"
             select BOARD_CHIP_K230D
 
+        config BOARD_K230_CANMV_ROCKBASE
+            bool "K230 CanMV RockBase, Onboard 1GiB/2GiB LPDDR4"
+            select BOARD_CHIP_K230
+
     endchoice
 
     config BOARD
@@ -130,6 +134,7 @@ menu "Board Configuration"
         default "k230_labplus_1956" if BOARD_K230_LABPLUS_1956
         default "k230_canmv_mrt" if BOARD_K230_CANMV_MRT
         default "k230d_canmv_lushanpi_lite" if BOARD_K230D_CANMV_LUSHANPI_LITE
+        default "k230_canmv_rockbase" if BOARD_K230_CANMV_ROCKBASE
 
     config BOARD_NAME
         string "Board Generate Image Name"
@@ -155,6 +160,7 @@ menu "Board Configuration"
         default "CanMV_K230_LabPlus_1956" if BOARD_K230_LABPLUS_1956
         default "CanMV_K230_MRT" if BOARD_K230_CANMV_MRT
         default "CanMV_K230D_Lushanpi_Lite" if BOARD_K230D_CANMV_LUSHANPI_LITE
+        default "CanMV_K230_RockBase" if BOARD_K230_CANMV_ROCKBASE
 
     config BOARD_GEN_IMAGE_CFG_FILE
         string "Board specified generate image configure file"
@@ -206,5 +212,6 @@ menu "Board Configuration"
     source "$(SDK_BOARDS_DIR)/k230_labplus_1956/Kconfig"
     source "$(SDK_BOARDS_DIR)/k230_canmv_mrt/Kconfig"
     source "$(SDK_BOARDS_DIR)/k230d_canmv_lushanpi_lite/Kconfig"
+    source "$(SDK_BOARDS_DIR)/k230_canmv_rockbase/Kconfig"
 
 endmenu
