@@ -32,15 +32,28 @@ gen_image()
 {
 	local config="$1";
 	local image="$2";
+	local generated_image;
+	local generated_image_name;
+	local extension;
 
-    python3 ${SDK_TOOLS_DIR}/genimage.py --rootpath "${SDK_BUILD_IMAGES_DIR}" --outputpath "${SDK_BUILD_DIR}" --config "${config}"
+    # Do not allow a failed generator invocation to reuse an image from an
+    # earlier build.
+    rm -f "${SDK_BUILD_DIR}/sysimage-sdcard.kdimg" \
+        "${SDK_BUILD_DIR}/sysimage-sdcard.img" \
+        "${SDK_BUILD_DIR}/sysimage-spinand.kdimg" \
+        "${SDK_BUILD_DIR}/sysimage-spinor.kdimg"
+
+    if ! python3 "${SDK_TOOLS_DIR}/genimage.py" --rootpath "${SDK_BUILD_IMAGES_DIR}" --outputpath "${SDK_BUILD_DIR}" --config "${config}"; then
+        echo "Error: Image generation failed for config ${config}!"
+        return 1
+    fi
 
     # Find the generated image file (could be .img or .kdimg)
-    generated_image=$(find ${SDK_BUILD_DIR} -maxdepth 1 -type f \( -name "sysimage-sdcard.kdimg" -o -name "sysimage-sdcard.img" -o -name "sysimage-spinand.kdimg" -o -name "sysimage-spinor.kdimg"  \) | head -n 1)
+    generated_image=$(find "${SDK_BUILD_DIR}" -maxdepth 1 -type f \( -name "sysimage-sdcard.kdimg" -o -name "sysimage-sdcard.img" -o -name "sysimage-spinand.kdimg" -o -name "sysimage-spinor.kdimg" \) | head -n 1)
 
     if [ -z "$generated_image" ]; then
         echo "Error: No generated image file found!"
-        exit 1
+        return 1
     fi
 
     # Get just the filename without path
@@ -50,13 +63,13 @@ gen_image()
     extension="${generated_image_name##*.}"
 
     # Rename the file
-    mv "$generated_image" "${SDK_BUILD_DIR}/${image}.${extension}"
+    mv "$generated_image" "${SDK_BUILD_DIR}/${image}.${extension}" || return 1
 
     echo "Compress image ${image}.${extension}.gz, it will take a while"
 
-    gzip -k -f "${SDK_BUILD_DIR}/${image}.${extension}"
-    chmod a+rw "${SDK_BUILD_DIR}/${image}.${extension}" "${SDK_BUILD_DIR}/${image}.${extension}.gz"
-    md5sum "${SDK_BUILD_DIR}/${image}.${extension}" "${SDK_BUILD_DIR}/${image}.${extension}.gz" > "${SDK_BUILD_DIR}/${image}.${extension}.gz.md5"
+    gzip -k -f "${SDK_BUILD_DIR}/${image}.${extension}" || return 1
+    chmod a+rw "${SDK_BUILD_DIR}/${image}.${extension}" "${SDK_BUILD_DIR}/${image}.${extension}.gz" || return 1
+    md5sum "${SDK_BUILD_DIR}/${image}.${extension}" "${SDK_BUILD_DIR}/${image}.${extension}.gz" > "${SDK_BUILD_DIR}/${image}.${extension}.gz.md5" || return 1
 
     echo "Generated image done, at ${SDK_BUILD_DIR}/${image}.${extension}"
 }
@@ -65,6 +78,8 @@ gen_ota_image()
 {
     local config="$1";
     local image="$2";
+    local generated_image;
+    local generated_image_name;
 
     # 如果没有对应的 kdimage 配置文件，则直接返回
     if [ ! -f "${config}" ]; then
@@ -74,28 +89,31 @@ gen_ota_image()
     echo "Generate kdimage by config ${config}"
 
     # 清理上一次生成的 *.kdimg，避免被 find 误选
-    rm -f ${SDK_BUILD_DIR}/*.kdimg 2>/dev/null || true
+    rm -f "${SDK_BUILD_DIR}"/*.kdimg 2>/dev/null || true
 
-    python3 ${SDK_TOOLS_DIR}/genimage.py --rootpath "${SDK_BUILD_IMAGES_DIR}" --outputpath "${SDK_BUILD_DIR}" --config "${config}"
+    if ! python3 "${SDK_TOOLS_DIR}/genimage.py" --rootpath "${SDK_BUILD_IMAGES_DIR}" --outputpath "${SDK_BUILD_DIR}" --config "${config}"; then
+        echo "Error: Kdimage generation failed for config ${config}!"
+        return 1
+    fi
 
     # 只寻找 kdimg（文件名由 cfg 中的 image 名决定，这里不依赖固定前缀）
-    generated_image=$(find ${SDK_BUILD_DIR} -maxdepth 1 -type f -name "*.kdimg" | head -n 1)
+    generated_image=$(find "${SDK_BUILD_DIR}" -maxdepth 1 -type f -name "*.kdimg" | head -n 1)
 
     if [ -z "$generated_image" ]; then
         echo "Error: No kdimg image file found for config ${config}!"
-        return
+        return 1
     fi
 
     generated_image_name=$(basename "$generated_image")
 
     #cp $generated_image ${SDK_BUILD_IMAGES_DIR}/sdcard/
-    mv "$generated_image" "${SDK_BUILD_DIR}/${image}.kdimg"
+    mv "$generated_image" "${SDK_BUILD_DIR}/${image}.kdimg" || return 1
 
     echo "Compress kdimage ${image}.kdimg.gz, it will take a while"
 
-    gzip -k -f "${SDK_BUILD_DIR}/${image}.kdimg"
-    chmod a+rw "${SDK_BUILD_DIR}/${image}.kdimg" "${SDK_BUILD_DIR}/${image}.kdimg.gz"
-    md5sum "${SDK_BUILD_DIR}/${image}.kdimg" "${SDK_BUILD_DIR}/${image}.kdimg.gz" > "${SDK_BUILD_DIR}/${image}.kdimg.gz.md5"
+    gzip -k -f "${SDK_BUILD_DIR}/${image}.kdimg" || return 1
+    chmod a+rw "${SDK_BUILD_DIR}/${image}.kdimg" "${SDK_BUILD_DIR}/${image}.kdimg.gz" || return 1
+    md5sum "${SDK_BUILD_DIR}/${image}.kdimg" "${SDK_BUILD_DIR}/${image}.kdimg.gz" > "${SDK_BUILD_DIR}/${image}.kdimg.gz.md5" || return 1
 
     echo "Generated kdimage done, at ${SDK_BUILD_DIR}/${image}.kdimg"
 }
@@ -199,5 +217,5 @@ else
     fi
 fi
 
-gen_ota_image "${SDK_BOARD_DIR}/genimage-sdcard-ota.cfg" "${image_name}_ota"
-gen_image ${SDK_BOARD_DIR}/${CONFIG_BOARD_GEN_IMAGE_CFG_FILE} $image_name;
+gen_ota_image "${SDK_BOARD_DIR}/genimage-sdcard-ota.cfg" "${image_name}_ota" || exit 1
+gen_image "${SDK_BOARD_DIR}/${CONFIG_BOARD_GEN_IMAGE_CFG_FILE}" "$image_name" || exit 1
