@@ -36,6 +36,15 @@ make k230_burntool_spi_nor_defconfig
 make -j
 mv u-boot.bin "$temp_folder/loader_spi_nor.bin"
 
+# make the public loader for the 1 KiB OTP medium
+make distclean
+make k230_burntool_otp_defconfig
+make -j
+mv u-boot.bin "$temp_folder/loader_otp.bin"
+
+# k230_burntool_otp_cde_defconfig is intentionally excluded from release
+# builds. It is only for internal CDE debugging and must be built manually.
+
 # clean
 make distclean
 
