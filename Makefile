@@ -196,6 +196,7 @@ clean: kconfig-clean uboot-clean rtsmart-clean opensbi-clean canmv-clean app-cle
 distclean: kconfig-distclean uboot-distclean rtsmart-distclean opensbi-distclean canmv-distclean app-distclean
 	$(call del_mark)
 	@rm -rf $(SDK_BUILD_DIR)
+	@rm -rf $(SDK_SRC_ROOT_DIR)/.cache
 	@rm -rf $(SDK_SRC_ROOT_DIR)/.config
 	@rm -rf $(SDK_SRC_ROOT_DIR)/.config.old
 	@rm -rf $(SDK_SRC_ROOT_DIR)/defconfig
