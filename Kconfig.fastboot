@@ -18,4 +18,16 @@ menuconfig FAST_BOOT_CONFIGURATION
             help
                 Delete the original Fast boot file, so it will not exists in filesystem.
 
+        config FAST_BOOT_QUIET
+            bool "Reduce boot banners and DDR training progress logs"
+            default y
+            help
+                Suppress DDR initialization banners and training progress
+                when building U-Boot from source, and the OpenSBI banner
+                when building OpenSBI from source. Prebuilt firmware keeps
+                its compiled logging behavior. RT-Smart prints only
+                one line with SDK and nncase versions instead of the full banner.
+                DDR errors and the MicroPython entry timestamp remain visible.
+                Disable to see DDR progress and the full version banner.
+
     endif

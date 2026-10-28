@@ -31,8 +31,16 @@ menu "RT-Smart Configuration"
         default 4 if RTT_CONSOLE_UART4
 
     config RTT_CONSOLE_BAUD
-        int "Rtsmart console uart baudrate"
+        int "Console UART baudrate (RT-Smart, U-Boot and OpenSBI)"
         default 115200
+        help
+            Shared log baudrate for RT-Smart and source-built U-Boot/SPL
+            and OpenSBI. The generated U-Boot environment also uses this
+            value. Prebuilt firmware keeps its compiled-in baudrate.
+            Enter a decimal integer, as required by the Kconfig int type.
+            For high-speed logging, use 2000000 with a compatible serial
+            adapter. Set the terminal to the same rate, with 8 data bits,
+            no parity and 1 stop bit.
 
     config RTSMART_LWP_APP_STACK_SIZE
         hex "Rtsmart LWP app stack size"

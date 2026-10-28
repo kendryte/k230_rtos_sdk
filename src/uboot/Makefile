@@ -23,6 +23,9 @@ else
 	@cp $(SDK_SRC_ROOT_DIR)/include/generated/autoconf.h $(SDK_UBOOT_SRC_DIR)/uboot/board/kendryte/common/sdk_autoconf.h
 	@python3 $(SDK_TOOLS_DIR)/gen_uboot_secure_header.py --config $(SDK_SRC_ROOT_DIR)/.config --output $(SDK_UBOOT_SRC_DIR)/uboot/board/kendryte/common/secure_boot_config_autogen.h
 	@$(MAKE) -C uboot $(UBOOT_DEFCONFIG) ARCH=riscv O=$(SDK_UBOOT_BUILD_DIR)
+	@# Both baud symbols are Kconfig int values (decimal, not hex).
+	@uboot/scripts/config --file $(SDK_UBOOT_BUILD_DIR)/.config --set-val BAUDRATE $(CONFIG_RTT_CONSOLE_BAUD)
+	@$(MAKE) -C $(SDK_UBOOT_BUILD_DIR) ARCH=riscv olddefconfig
 	@$(MAKE) -C $(SDK_UBOOT_BUILD_DIR) ARCH=riscv
 endif
 	@python3 $(SDK_TOOLS_DIR)/gen_otp_config.py --config $(SDK_SRC_ROOT_DIR)/.config -o $(SDK_BUILD_IMAGES_DIR)/uboot/otp_config.json --bin-output $(SDK_BUILD_IMAGES_DIR)/uboot/otp_data.kdimg --lock-output $(SDK_BUILD_IMAGES_DIR)/uboot/otp_key_lock.kdimg --full-output $(SDK_BUILD_IMAGES_DIR)/uboot/otp_full.kdimg

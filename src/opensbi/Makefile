@@ -12,6 +12,15 @@ endif
 
 SHELL := bash
 
+# Bundled OpenSBI 0.9: include/sbi/sbi_scratch.h defines
+# SBI_SCRATCH_NO_BOOT_PRINTS as bit 0. Recheck this mapping on upgrades.
+# OPENSBI_QUIET alone retains the version banner.
+ifeq ($(CONFIG_FAST_BOOT_QUIET),y)
+OPENSBI_BOOT_OPTIONS := FW_OPTIONS=1
+else
+OPENSBI_BOOT_OPTIONS := FW_OPTIONS=0
+endif
+
 .PHONY: all clean distclean
 
 .PHONY: build
@@ -34,7 +43,7 @@ ifeq ($(CONFIG_OPENSBI_USE_PREBUILT_FW_JUMP),y)
 else
 	@echo "Compiling OpenSBI..."
 	@pushd $(SDK_OPENSBI_SRC_DIR)/opensbi > /dev/null; \
-	$(MAKE) O=$(SDK_OPENSBI_BUILD_DIR) PLATFORM=kendryte/fpgac908 FW_PAYLOAD=n OPENSBI_QUIET=1 CROSS_COMPILE=$(CROSS_COMPILE) || exit $$?; \
+	$(MAKE) O=$(SDK_OPENSBI_BUILD_DIR) PLATFORM=kendryte/fpgac908 FW_PAYLOAD=n OPENSBI_QUIET=1 $(OPENSBI_BOOT_OPTIONS) CROSS_COMPILE=$(CROSS_COMPILE) || exit $$?; \
 	cp $(SDK_OPENSBI_BUILD_DIR)/platform/kendryte/fpgac908/firmware/fw_jump.bin $(SDK_OPENSBI_BUILD_DIR)/opensbi.bin || exit $$?; \
 	popd > /dev/null;
 endif

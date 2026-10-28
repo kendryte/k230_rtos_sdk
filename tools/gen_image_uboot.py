@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os, sys, argparse
+import re
 
 from pathlib import Path
 
@@ -26,6 +27,32 @@ def generate_uboot_env_bin(data_size : int = 0x10000, pad_byte : bytes = 0x00):
         sys.exit(1)
 
     uboot_env_bin_file = Path(uboot_generate_images_dir) / "env.bin"
+
+    if not kconfig.get("CONFIG_UBOOT_USE_PREBUILT", False):
+        baud_value = kconfig.get("CONFIG_RTT_CONSOLE_BAUD")
+        # Both the SDK and U-Boot declare this as a decimal Kconfig int.
+        # Do not silently select a default that differs from the firmware.
+        if not isinstance(baud_value, str) or not re.fullmatch(r"[1-9][0-9]*", baud_value):
+            raise ValueError(
+                f"{Path(sdk_root_dir) / '.config'}: CONFIG_RTT_CONSOLE_BAUD "
+                f"must be a positive decimal integer (got {baud_value!r}); "
+                "run 'make menuconfig' to regenerate the SDK configuration.")
+        baud = int(baud_value, 10)
+        env = uboot_env_file.read_text()
+        env, count = re.subn(r"^baudrate=.*$", f"baudrate={baud}", env, flags=re.M)
+        if not count:
+            env = env.rstrip("\n") + f"\nbaudrate={baud}\n"
+        console_lines = re.findall(r"^console_port=.*$", env, flags=re.M)
+        env, console_count = re.subn(
+            r"^(console_port=console=[^,\s]+,)\d+(?=[neo]\d|\s|$)",
+            lambda match: f"{match[1]}{baud}", env, flags=re.M)
+        if console_count != len(console_lines):
+            print(f"Warning: {uboot_env_file}: unsupported console_port format; "
+                  f"could not synchronize all console baud rates to {baud}",
+                  file=sys.stderr)
+        # Stage the resolved environment without changing the board template.
+        uboot_env_file = uboot_generate_images_dir / "env.txt"
+        uboot_env_file.write_text(env)
 
     mkenvimage = image_tools.MkenvImage()
 
