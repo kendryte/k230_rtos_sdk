@@ -7,6 +7,7 @@ import shutil
 from pathlib import Path
 from contextlib import contextmanager
 import subprocess
+from sdk_output import build_subprocess_fds
 import tempfile
 import urllib.request
 from urllib.error import URLError, HTTPError
@@ -241,7 +242,8 @@ def run_make_uboot(sdk_root: Path) -> None:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True,
-            bufsize=1
+            bufsize=1,
+            pass_fds=build_subprocess_fds(),
         )
         
         # Print output in real-time

@@ -50,11 +50,11 @@ menuconfig: clean
 
 .PHONY: arduino-sdk arduino-sdk-clean arduino-sdk-distclean
 arduino-sdk:
-	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/variants/$(CONFIG_BOARD)/uboot/**
+	@rm -rf "$(SDK_ARDUINO_SDK_BUILD_DIR)/variants/$(CONFIG_BOARD)/uboot"
 	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/variants/$(CONFIG_BOARD)/uboot
 	@cp -rf $(SDK_BUILD_IMAGES_DIR)/uboot/* $(SDK_ARDUINO_SDK_BUILD_DIR)/variants/$(CONFIG_BOARD)/uboot/
 
 arduino-sdk-clean:
-	@rm -rf $(SDK_ARDUINO_SDK_BUILD_DIR)/$(CONFIG_BOARD)/uboot/**
+	@rm -rf "$(SDK_ARDUINO_SDK_BUILD_DIR)/variants/$(CONFIG_BOARD)/uboot"
 
 arduino-sdk-distclean: arduino-sdk-clean

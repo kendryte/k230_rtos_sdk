@@ -36,7 +36,12 @@ distclean: clean
 
 .PHONY: gen_kconfig
 gen_kconfig:
-	@echo "# Dynamic generate by Makefile, DO NOT Modify it.\n" > $(SDK_BUILD_DIR)/Kconfig.app; \
-	for dir in $(shell find $(SDK_APPS_SRC_DIR) -maxdepth 1 -mindepth 1 -type d); do \
-		echo "source \"$$dir/Kconfig\"" >> $(SDK_BUILD_DIR)/Kconfig.app; \
+	@set -e; \
+	output="$(SDK_BUILD_DIR)/Kconfig.app"; \
+	temporary=$$(mktemp "$$output.XXXXXX"); \
+	trap 'rm -f "$$temporary"' EXIT HUP INT TERM; \
+	echo "# Dynamic generate by Makefile, DO NOT Modify it." > "$$temporary"; \
+	for dir in $(sort $(wildcard $(SDK_APPS_SRC_DIR)/*/)); do \
+		echo "source \"$${dir}Kconfig\"" >> "$$temporary"; \
 	done; \
+	cmp -s "$$temporary" "$$output" || mv "$$temporary" "$$output"

@@ -15,12 +15,14 @@ from .image_com import *
 
 from .lib.toc import *
 from .lib.gpt import *
+from .image_kd import KdImgRegion, write_kdimage_from_raw
 
 class HdImageHandler(ComImageHandler):
     """Hard disk image handler, supports MBR, GPT and hybrid partition tables"""
     type = "hdimage"
     opts = [
         "align", "extended-partition", "fill",
+        "kdimage", "image_info", "chip_info", "board_info",
     ]
 
     def __init__(self):
@@ -29,11 +31,13 @@ class HdImageHandler(ComImageHandler):
         self.extended_partition: Optional[Partition] = None
         self.align: int = 0
         self.fill: bool = False
+        self.kdimage: Optional[str] = None
 
     def setup(self, image: Image, config: Dict[str, Any]) -> None:
         super().setup(image, config)
 
         self._parse_config_parameters()
+        self._setup_kdimage(image)
 
         # Handle block device
         self._handle_block_device(image)
@@ -82,6 +86,19 @@ class HdImageHandler(ComImageHandler):
         # Handle deprecated configuration
         self._handle_deprecated_config(config)
 
+    def _setup_kdimage(self, image: Image) -> None:
+        """Pick the KDIMG written beside the image; on by default, `kdimage = false` disables"""
+        kdimage = self.config.get("kdimage", True)
+        if kdimage is False or image.temporary or super().is_block_device(image.outfile):
+            return
+
+        image_file = os.path.basename(image.outfile)
+        if kdimage is True:
+            kdimage = os.path.splitext(image_file)[0] + ".kdimg"
+        if os.path.basename(kdimage) != kdimage or kdimage in (".", "..", image_file):
+            raise ImageError("kdimage must be a separate filename in the output directory")
+        self.kdimage = kdimage
+
     def _handle_deprecated_config(self, config: Dict[str, Any]) -> None:
         """Handle deprecated configuration parameters"""
         if "partition-table" in config:
@@ -123,6 +140,48 @@ class HdImageHandler(ComImageHandler):
 
         # Write TOC
         super().write_toc(image)
+
+        if self.kdimage:
+            self._write_kdimage(image)
+
+    def _write_kdimage(self, image: Image) -> None:
+        """Write the same layout as an MMC KDIMG for burning tools"""
+        if self.extended_partition:
+            raise ImageError("kdimage does not support logical partitions; set kdimage = false")
+
+        regions = []
+        for part in image.partitions:
+            if part.name == "[MBR]":
+                # The MBR entries are at the end of sector 0; burn the whole sector.
+                offset, size = 0, 512
+            elif part.image:
+                offset = part.offset
+                child_size = super().get_child_image_size(image, part)
+                # Payloads are read back from the image, so 4K alignment past
+                # the child only repeats bytes the image holds there.
+                size = super().roundup(child_size, 4096) if child_size > 4096 else child_size
+                size = min(size, max(child_size, image.size - offset))
+            else:
+                # Metadata and placeholders such as ota_meta are burned as in the image.
+                offset, size = part.offset, part.size
+
+            # Burning tools write whole sectors and reject a sector-rounded
+            # payload larger than its partition, e.g. a 640-byte TOC.
+            size = super().roundup(size, 512)
+            if size:
+                regions.append(KdImgRegion(name=part.name, offset=offset, size=size,
+                                           max_size=max(part.size, size),
+                                           erase_size=part.erase_size or 0,
+                                           flag=part.flag or 0))
+
+        write_kdimage_from_raw(
+            image.outfile,
+            os.path.join(os.path.dirname(image.outfile), self.kdimage),
+            regions,
+            image_info=self.config.get("image_info", "v1.1.0"),
+            chip_info=self.config.get("chip_info", "K230"),
+            board_info=self.config.get("board_info", os.environ.get("CONFIG_BOARD") or "none"),
+        )
 
 
     def _write_partition_table(self, image: Image) -> None:

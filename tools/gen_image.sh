@@ -43,13 +43,20 @@ gen_image()
         "${SDK_BUILD_DIR}/sysimage-spinand.kdimg" \
         "${SDK_BUILD_DIR}/sysimage-spinor.kdimg"
 
-    if ! python3 "${SDK_TOOLS_DIR}/genimage.py" --rootpath "${SDK_BUILD_IMAGES_DIR}" --outputpath "${SDK_BUILD_DIR}" --config "${config}"; then
+    # An MMC .img comes with a .kdimg of the same layout for burning tools.
+    if ! CONFIG_BOARD="${CONFIG_BOARD}" python3 "${SDK_TOOLS_DIR}/genimage.py" --rootpath "${SDK_BUILD_IMAGES_DIR}" --outputpath "${SDK_BUILD_DIR}" --config "${config}"; then
         echo "Error: Image generation failed for config ${config}!"
         return 1
     fi
 
-    # Find the generated image file (could be .img or .kdimg)
-    generated_image=$(find "${SDK_BUILD_DIR}" -maxdepth 1 -type f \( -name "sysimage-sdcard.kdimg" -o -name "sysimage-sdcard.img" -o -name "sysimage-spinand.kdimg" -o -name "sysimage-spinor.kdimg" \) | head -n 1)
+    # Find the primary image: MMC uses .img (with a companion .kdimg), SPI flash uses .kdimg
+    generated_image=
+    for generated_image_name in sysimage-sdcard.img sysimage-spinand.kdimg sysimage-spinor.kdimg; do
+        if [ -f "${SDK_BUILD_DIR}/${generated_image_name}" ]; then
+            generated_image="${SDK_BUILD_DIR}/${generated_image_name}"
+            break
+        fi
+    done
 
     if [ -z "$generated_image" ]; then
         echo "Error: No generated image file found!"
@@ -72,6 +79,16 @@ gen_image()
     md5sum "${SDK_BUILD_DIR}/${image}.${extension}" "${SDK_BUILD_DIR}/${image}.${extension}.gz" > "${SDK_BUILD_DIR}/${image}.${extension}.gz.md5" || return 1
 
     echo "Generated image done, at ${SDK_BUILD_DIR}/${image}.${extension}"
+
+    if [ "$generated_image_name" = "sysimage-sdcard.img" ] && \
+       [ -f "${SDK_BUILD_DIR}/sysimage-sdcard.kdimg" ]; then
+        mv "${SDK_BUILD_DIR}/sysimage-sdcard.kdimg" "${SDK_BUILD_DIR}/${image}.kdimg" || return 1
+        echo "Compress image ${image}.kdimg.gz, it will take a while"
+        gzip -k -f "${SDK_BUILD_DIR}/${image}.kdimg" || return 1
+        chmod a+rw "${SDK_BUILD_DIR}/${image}.kdimg" "${SDK_BUILD_DIR}/${image}.kdimg.gz" || return 1
+        md5sum "${SDK_BUILD_DIR}/${image}.kdimg" "${SDK_BUILD_DIR}/${image}.kdimg.gz" > "${SDK_BUILD_DIR}/${image}.kdimg.gz.md5" || return 1
+        echo "Generated MMC kdimage done, at ${SDK_BUILD_DIR}/${image}.kdimg"
+    fi
 }
 
 gen_ota_image()

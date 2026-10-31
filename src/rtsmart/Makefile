@@ -38,7 +38,7 @@ RTSMART_FIRMWARE_IMAGE_DIR := $(SDK_BUILD_IMAGES_DIR)/bin/firmware
 
 .PHONY: all clean distclean menuconfig
 
-.parse_config: $(RTSMART_DEFCONFIG_FILE)
+.parse_config: $(RTSMART_DEFCONFIG_FILE) $(SDK_SRC_ROOT_DIR)/include/generated/autoconf.h
 	@export RTT_CC=gcc; \
 	export RTT_CC_PREFIX=$(CROSS_COMPILE_PREFIX); \
 	export RTT_EXEC_PATH=$(CROSS_COMPILE_DIR); \

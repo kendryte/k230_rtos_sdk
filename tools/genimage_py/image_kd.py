@@ -114,6 +114,101 @@ class KdImgPartRecord:
     image_file: str
     part: KdImgPart
 
+@dataclass
+class KdImgRegion:
+    """A range of a finished raw disk image to package as a KDIMG part"""
+    name: str
+    offset: int
+    size: int
+    max_size: int
+    erase_size: int = 0
+    flag: int = 0
+
+def write_kdimage_from_raw(raw_path: str, kd_path: str, regions: List[KdImgRegion],
+                           image_info: str, chip_info: str, board_info: str) -> None:
+    """Package regions of a finished MMC image as a KDIMG.
+
+    Payloads are read back from the raw image, so the KDIMG writes exactly the
+    bytes the raw image holds at each offset. Identical payloads, such as A/B
+    slots of the same firmware, share one copy of their content.
+
+    Each region is hashed and staged in one pass, trading temporary writes of
+    duplicate payloads for avoiding a second read of unique payloads.
+    """
+    if len(regions) * KD_PART_ENTRY_ALIGN > KDIMG_CONTENT_START_OFFSET - KD_HEADER_ALIGN:
+        raise ImageError(f"Too many partitions for a KDIMG partition table: {len(regions)}")
+
+    chunk_size = 4 * 1024 * 1024
+    output_dir = os.path.dirname(os.path.abspath(kd_path))
+    temp_path = None
+    parts: List[KdImgPart] = []
+    contents: Dict[Tuple[bytes, int], int] = {}
+    write_offset = KDIMG_CONTENT_START_OFFSET
+    try:
+        with open(raw_path, "rb") as raw, tempfile.NamedTemporaryFile(
+                dir=output_dir, prefix=".kdimg-", delete=False) as kd:
+            temp_path = kd.name
+            for region in sorted(regions, key=lambda r: r.offset):
+                digest = hashlib.sha256()
+                raw.seek(region.offset)
+                kd.seek(write_offset)
+                remaining = region.size
+                while remaining:
+                    # Ranges past the end of the raw file are unwritten zeros.
+                    chunk = raw.read(min(remaining, chunk_size)) or bytes(min(remaining, chunk_size))
+                    kd.write(chunk)
+                    digest.update(chunk)
+                    remaining -= len(chunk)
+                sha256 = digest.digest()
+
+                content_offset = contents.get((sha256, region.size))
+                if content_offset is None:
+                    content_offset = contents[(sha256, region.size)] = write_offset
+                    write_offset += KdImageHandler.roundup(region.size, KD_ALIGNMENT)
+                else:
+                    logger.debug(f"Skipping duplicate part content: {region.name}")
+
+                parts.append(KdImgPart(
+                    part_offset=region.offset,
+                    part_size=region.size,
+                    part_erase_size=region.erase_size,
+                    part_max_size=region.max_size,
+                    part_flag=region.flag,
+                    part_name=region.name,
+                    part_content_offset=content_offset,
+                    part_content_size=region.size,
+                    part_content_sha256=sha256,
+                ))
+
+            part_table_data = b''.join(part.to_bytes() for part in parts)
+            header = KdImgHdr(
+                part_tbl_num=len(parts),
+                part_tbl_crc32=zlib.crc32(part_table_data) & 0xFFFFFFFF,
+                image_info=image_info,
+                chip_info=chip_info,
+                board_info=board_info,
+            )
+            header.img_hdr_crc32 = zlib.crc32(header.to_bytes()) & 0xFFFFFFFF
+
+            kd.seek(0)
+            kd.write(header.to_bytes())
+            kd.seek(KD_HEADER_ALIGN)
+            kd.write(part_table_data)
+            kd.truncate(write_offset)
+        # NamedTemporaryFile is private; give the image the usual permissions.
+        umask = os.umask(0)
+        os.umask(umask)
+        os.chmod(temp_path, 0o666 & ~umask)
+        os.replace(temp_path, kd_path)
+        temp_path = None
+    except OSError as error:
+        raise ImageError(f"Failed to generate KDIMG {kd_path}: {error}") from error
+    finally:
+        if temp_path is not None:
+            os.unlink(temp_path)
+
+    logger.info(f"Successfully generated image {kd_path}, size {format_size(write_offset)}")
+
 class KdImageHandler(ComImageHandler):
     """KD Image Handler"""
     type = "kdimage"

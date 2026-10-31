@@ -101,6 +101,57 @@ repo sync
 
 This process will compile the software tailored to your selected board configuration.
 
+### Build from an Output Directory
+
+Selecting a defconfig creates `output/<defconfig>/Makefile`. That directory owns
+its `.config`, `.config.old`, generated `include/`, and build artifacts. The
+root `.config`, `.config.old`, and `include` are symlinks to the selected output.
+
+```bash
+make k230_rtos_evb_defconfig
+make -C output/k230_rtos_evb_defconfig
+make -C output/k230_rtos_evb_defconfig menuconfig
+make -C output/k230_rtos_evb_defconfig arduino-sdk
+```
+
+Arduino SDK files are generated in `output/<defconfig>/arduino-sdk/`.
+
+To resume another configured output, run `make -C output/<defconfig>` or change
+into that directory and run `make`. This restores its saved configuration without
+reapplying the defconfig. Running `make <defconfig>` explicitly resets that
+output's configuration to the defaults. Run configuration and build commands
+separately.
+
+Builds synchronize changed Kconfig definitions before loading build options.
+A failed defconfig restores the saved configuration and keeps the previous
+output selected. `make help` and a non-interactive `make list-def` do not change
+the active output. `make -n` reports the output and delegated make command
+without running sub-builds or changing configuration links.
+
+`make log` writes `output/<defconfig>/log.txt` and returns a failure if the build
+fails. A full `make` clears the selected output's `images/` directory first, so
+disabled components and applications leave no stale files in the image.
+Component builds such as `make uboot` preserve other components' staged images;
+use `make rm_image` to clear `images/` explicitly. `make arduino-sdk-clean` removes the selected output's exported
+U-Boot and OpenSBI variants.
+
+MMC images configured with `hdimage` also generate a `.kdimg` by default.
+KDIMG does not support extended or logical partitions. If a board uses
+`extended-partition`, set `kdimage = false` inside its `hdimage` block to disable
+KDIMG generation and build only the raw image.
+
+For an existing checkout, `make outputmakefile` migrates the current root
+configuration and generated headers into its output directory, preserving file
+contents and timestamps. It creates the forwarding Makefile without compiling
+firmware. Other old outputs need their matching configuration initialized before
+they can be resumed; the current root configuration is migrated only to its own
+output.
+
+The shared root links allow one active SDK build at a time; a second independent
+build is rejected while the first is running. Switching outputs preserves object
+caches, but the shared RT-Smart BSP configuration is regenerated on its next
+build. Dependencies affected by that configuration can still be rebuilt.
+
 ## How to Contribute to This Project
 
 ---

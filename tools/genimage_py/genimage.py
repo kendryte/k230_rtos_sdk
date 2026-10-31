@@ -440,6 +440,7 @@ class GenImageTool:
             logger.info("All images generated successfully")
         except ImageError as e:
             logger.error(f"error: {str(e)}")
+            raise
         finally:
             # Clean up temporary files
             shutil.rmtree(self.tmppath, ignore_errors=True)

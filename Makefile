@@ -1,55 +1,93 @@
 export SDK_SRC_ROOT_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 
+ifneq ($(SDK_BUILD_DISPATCHED),1)
+include $(SDK_SRC_ROOT_DIR)/tools/output.mk
+else
+# A nested invocation of the SDK must select its output again (list-def/log).
+unexport SDK_BUILD_DISPATCHED
+
 .DEFAULT_GOAL := all
 
 include $(SDK_SRC_ROOT_DIR)/tools/mkenv.mk
 
 include $(SDK_TOOLS_DIR)/kconfig.mk
 
-ifeq ($(strip $(filter $(MAKECMDGOALS),clean distclean list_def list-def dl_toolchain)),)
-$(SDK_SRC_ROOT_DIR)/.config: $(KCONF)
+ifeq ($(strip $(filter $(MAKECMDGOALS),clean distclean help list_def list-def dl_toolchain)),)
+$(SDK_CONFIG_FILE): | $(KCONF)
 	$(call gen_kconfig,$(SDK_CANMV_SRC_DIR),canmv)
 	$(call gen_kconfig,$(SDK_RTSMART_SRC_DIR)/examples,rtt_examples)
 	@make -C $(SDK_APPS_SRC_DIR) gen_kconfig
 
-	@$(KCONF) --defconfig $(SDK_SRC_ROOT_DIR)/configs/$(MK_LIST_DEFCONFIG) $(SDK_SRC_ROOT_DIR)/Kconfig
+	@$(SDK_KCONFIG_ENV) $(KCONF) --defconfig $(SDK_SRC_ROOT_DIR)/configs/$(MK_LIST_DEFCONFIG) $(SDK_SRC_ROOT_DIR)/Kconfig
 
-$(SDK_SRC_ROOT_DIR)/.config.old: $(SDK_SRC_ROOT_DIR)/.config
-	@cp -f $(SDK_SRC_ROOT_DIR)/.config $(SDK_SRC_ROOT_DIR)/.config.old
-	@$(KCONF) --syncconfig $(SDK_SRC_ROOT_DIR)/Kconfig
+# Only the explicit synchronization pass loads generated dependencies. The
+# dispatcher runs it before evaluating build targets in a fresh make process.
+ifneq ($(filter .autoconf,$(MAKECMDGOALS)),)
+-include $(SDK_CONFIG_AUTO).cmd
+.PHONY: FORCE
+FORCE:
+
+$(SDK_CONFIG_AUTO): $(SDK_SRC_ROOT_DIR)/Kconfig $(deps_config) \
+                   $(SDK_BUILD_DIR)/Kconfig.canmv $(SDK_BUILD_DIR)/Kconfig.rtt_examples \
+                   $(SDK_BUILD_DIR)/Kconfig.app
+ifeq ($(and $(wildcard $(SDK_CONFIG_AUTO).cmd),$(wildcard $(SDK_CONFIG_HEADER))),)
+$(SDK_CONFIG_AUTO): FORCE
+endif
 endif
 
+$(SDK_CONFIG_AUTO): $(SDK_CONFIG_FILE) | $(KCONF)
+	@$(SDK_KCONFIG_ENV) $(KCONF) --syncconfig $(SDK_SRC_ROOT_DIR)/Kconfig
+
+$(SDK_CONFIG_HEADER): $(SDK_CONFIG_AUTO)
+	@if [ ! -f "$@" ]; then $(SDK_KCONFIG_ENV) $(KCONF) --syncconfig $(SDK_SRC_ROOT_DIR)/Kconfig; fi
+endif
+
+.PHONY: sdk-kconfig
+sdk-kconfig:
+	$(call gen_kconfig,$(SDK_CANMV_SRC_DIR),canmv)
+	$(call gen_kconfig,$(SDK_RTSMART_SRC_DIR)/examples,rtt_examples)
+	+@$(MAKE) -C $(SDK_APPS_SRC_DIR) gen_kconfig
+
 .PHONY: menuconfig
-menuconfig: $(MCONF) $(SDK_SRC_ROOT_DIR)/.config
-	$(call del_mark)
+menuconfig: $(MCONF) $(SDK_CONFIG_FILE)
 
 	$(call gen_kconfig,$(SDK_CANMV_SRC_DIR),canmv)
 	$(call gen_kconfig,$(SDK_RTSMART_SRC_DIR)/examples,rtt_examples)
 	@make -C $(SDK_APPS_SRC_DIR) gen_kconfig
 
-	@$(MCONF) $(SDK_SRC_ROOT_DIR)/Kconfig
+	@$(SDK_KCONFIG_ENV) $(MCONF) $(SDK_SRC_ROOT_DIR)/Kconfig
 
 .PHONY: savedefconfig
-savedefconfig: $(KCONF) $(SDK_SRC_ROOT_DIR)/.config
+savedefconfig: $(KCONF) $(SDK_CONFIG_FILE)
 	$(call gen_kconfig,$(SDK_CANMV_SRC_DIR),canmv)
 	$(call gen_kconfig,$(SDK_RTSMART_SRC_DIR)/examples,rtt_examples)
 	@make -C $(SDK_APPS_SRC_DIR) gen_kconfig
 
-	@$(KCONF) --savedefconfig=$(SDK_SRC_ROOT_DIR)/configs/$(MK_LIST_DEFCONFIG) $(SDK_SRC_ROOT_DIR)/Kconfig
+	@$(SDK_KCONFIG_ENV) $(KCONF) --savedefconfig=$(SDK_SRC_ROOT_DIR)/configs/$(MK_LIST_DEFCONFIG) $(SDK_SRC_ROOT_DIR)/Kconfig
 
 .PHONY: .autoconf
-.autoconf: $(SDK_SRC_ROOT_DIR)/.config.old
+.autoconf: $(SDK_CONFIG_HEADER)
+
+# Migration/selection and wrapper generation happen before this Makefile loads.
+.PHONY: outputmakefile
+outputmakefile:
+	@echo "Build directory: $(SDK_BUILD_DIR)"
 
 .PHONY: rm_image
 rm_image:
 	@rm -rf $(SDK_BUILD_IMAGES_DIR)
 
 .PHONY: prepare
-prepare: .autoconf rm_image
+prepare: .autoconf
+
+# A full build restages images/ so disabled components or applications cannot
+# leave stale files in the packed image; component builds keep other images.
+ifneq ($(filter all,$(or $(MAKECMDGOALS),$(.DEFAULT_GOAL))),)
+prepare: rm_image
+endif
 
 
 %_defconfig: $(KCONF)
-	$(call del_mark)
 
 	$(call gen_kconfig,$(SDK_CANMV_SRC_DIR),canmv)
 	$(call gen_kconfig,$(SDK_RTSMART_SRC_DIR)/examples,rtt_examples)
@@ -58,19 +96,19 @@ prepare: .autoconf rm_image
 	@if [ -f "$(SDK_SRC_ROOT_DIR)/tools/merge_configs.py" ]; then \
 		$(PYTHON) $(SDK_SRC_ROOT_DIR)/tools/merge_configs.py \
 			--defconfig "$(SDK_SRC_ROOT_DIR)/configs/$@" \
-			--output .defconfig.tmp \
+			--output "$(SDK_BUILD_DIR)/.defconfig.tmp" \
 			--samples "$(SDK_SRC_ROOT_DIR)/tools/all_samples_config" \
 			--enable-samples "$(ENABLE_ALL_SAMPLES)"; \
 	else \
-		cp "$(SDK_SRC_ROOT_DIR)/configs/$@" .defconfig.tmp; \
+		cp "$(SDK_SRC_ROOT_DIR)/configs/$@" "$(SDK_BUILD_DIR)/.defconfig.tmp"; \
 	fi
 
-	@$(KCONF) --defconfig .defconfig.tmp "$(SDK_SRC_ROOT_DIR)/Kconfig" || exit 1
-	@rm -f .defconfig.tmp
+	@$(SDK_KCONFIG_ENV) $(KCONF) --defconfig "$(SDK_BUILD_DIR)/.defconfig.tmp" "$(SDK_SRC_ROOT_DIR)/Kconfig" || exit 1
+	@rm -f "$(SDK_BUILD_DIR)/.defconfig.tmp"
 
 	@if [ ! -d "$(SDK_CANMV_SRC_DIR)" ]; then \
 		echo "canmv does not exist, updating CONFIG_SDK_ENABLE_CANMV in .config"; \
-		sed -i '/^CONFIG_SDK_ENABLE_CANMV=y/c\# CONFIG_SDK_ENABLE_CANMV is not set' .config; \
+		sed -i '/^CONFIG_SDK_ENABLE_CANMV=y/c\# CONFIG_SDK_ENABLE_CANMV is not set' "$(SDK_CONFIG_FILE)"; \
 	fi
 
 	@echo "Apply $(@) success"
@@ -199,6 +237,7 @@ distclean: kconfig-distclean uboot-distclean rtsmart-distclean opensbi-distclean
 	@rm -rf $(SDK_SRC_ROOT_DIR)/.cache
 	@rm -rf $(SDK_SRC_ROOT_DIR)/.config
 	@rm -rf $(SDK_SRC_ROOT_DIR)/.config.old
+	@rm -f $(SDK_SRC_ROOT_DIR)/include
 	@rm -rf $(SDK_SRC_ROOT_DIR)/defconfig
 	@rm -rf $(SDK_SRC_ROOT_DIR)/uboot_defconfig
 	@rm -rf $(SDK_SRC_ROOT_DIR)/rtsmart_defconfig
@@ -207,11 +246,13 @@ distclean: kconfig-distclean uboot-distclean rtsmart-distclean opensbi-distclean
 	@echo "distclean done."
 
 .PHONY: log
+log: SHELL := /bin/bash
+log: .SHELLFLAGS := -o pipefail -c
 log:
 ifeq ($(BEAR_EXISTS),yes)
-	@$(BEAR_COMMAND) $(MAKE) 2>&1 | tee log.txt
+	@$(BEAR_COMMAND) $(MAKE) 2>&1 | tee "$(SDK_BUILD_DIR)/log.txt"
 else
-	@$(MAKE) 2>&1 | tee log.txt
+	@$(MAKE) 2>&1 | tee "$(SDK_BUILD_DIR)/log.txt"
 endif
 
 .PHONY: dl_toolchain
@@ -228,7 +269,7 @@ endif
 # Generate DDR test image targets using pattern rule
 ddr_test_%:
 	@echo "Build DDR test image, size: $* MB"
-	@sed -i 's/.*CONFIG_UBOOT_USE_PREBUILT.*/# CONFIG_UBOOT_USE_PREBUILT is not set/' .config
+	@sed -i 's/.*CONFIG_UBOOT_USE_PREBUILT.*/# CONFIG_UBOOT_USE_PREBUILT is not set/' "$(SDK_CONFIG_FILE)"
 	@python3 tools/gen_ddr_test_img.py $*
 
 .PHONY: help
@@ -239,6 +280,8 @@ help:
 	@echo "Supported compilation options"
 	@echo "make                          -- Build all for k230";
 	@echo "make xxxx_defconfig           -- Select board configure";
+	@echo "make -C output/xxxx_defconfig -- Resume a configured output";
+	@echo "make outputmakefile           -- Migrate current config and generate its output Makefile";
 	@echo "make menuconfig               -- Update configures";
 	@echo "make savedefconfig            -- After menuconfig, generate the default config, can update board defconfig";
 	@echo "make list-def                 -- Open the interactive defconfig selector";
@@ -271,3 +314,5 @@ endif
 	@echo "make arduino-sdk              -- Generate arduino-sdk";
 	@echo "make flash M=SDCARD           -- Download/flash firmware image to connected K230 device";
 	@echo "Run make list-def to select a board configuration.";
+
+endif # SDK_BUILD_DISPATCHED

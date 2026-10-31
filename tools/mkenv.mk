@@ -16,7 +16,7 @@ $(shell \
 endef
 
 define del_mark
-$(shell find $(SDK_SRC_ROOT_DIR) -type f -name ".parse_config" | xargs rm -rf {})
+	@rm -f "$(SDK_RTSMART_SRC_DIR)/.parse_config"
 endef
 
 # 1 src
@@ -29,11 +29,13 @@ define sync_dir
 	@rsync -aq --delete $(1)/ $(2)/
 endef
 
+# Preserve timestamps when the generated Kconfig content is unchanged.
 define gen_kconfig
 @if [ -f "$(1)/Kconfig" ]; then \
-    cp -f $(1)/Kconfig $(SDK_BUILD_DIR)/Kconfig.$(2); \
-else \
-    echo "" > $(SDK_BUILD_DIR)/Kconfig.$(2); \
+    cmp -s "$(1)/Kconfig" "$(SDK_BUILD_DIR)/Kconfig.$(2)" || \
+        cp -f "$(1)/Kconfig" "$(SDK_BUILD_DIR)/Kconfig.$(2)"; \
+elif [ ! -f "$(SDK_BUILD_DIR)/Kconfig.$(2)" ] || [ -s "$(SDK_BUILD_DIR)/Kconfig.$(2)" ]; then \
+    : > "$(SDK_BUILD_DIR)/Kconfig.$(2)"; \
 fi
 endef
 
@@ -108,6 +110,10 @@ export NCPUS?=$(PARALLEL)
 
 CONFIG_SDK_ENABLE_CANMV ?= n
 
+# Load the configuration before deriving SDK_BUILD_DIR. The dispatcher may
+# select the legacy root .config here for inspection before migration.
+SDK_CONFIG_FILE ?= $(if $(SDK_BUILD_DIR),$(SDK_BUILD_DIR)/.config,$(SDK_SRC_ROOT_DIR)/.config)
+
 def_config :=$(filter %_defconfig,$(MAKECMDGOALS))
 ifneq ($(def_config),)
   ifeq ($(shell if [ -f $(SDK_SRC_ROOT_DIR)/configs/$(def_config) ]; then echo 1; else echo 0; fi;), 0)
@@ -116,14 +122,14 @@ ifneq ($(def_config),)
 
   CONFIG_BOARD_CONFIG_NAME := $(def_config)
 else
-  -include $(SDK_SRC_ROOT_DIR)/.config
+  -include $(SDK_CONFIG_FILE)
 endif
 
 CONFIG_BOARD := $(call qstrip,$(CONFIG_BOARD))
 
 export CONFIG_SDK_ENABLE_CANMV
 
-ifeq ($(strip $(filter $(MAKECMDGOALS),list_def list-def dl_toolchain)),)
+ifeq ($(strip $(filter $(MAKECMDGOALS),help list_def list-def dl_toolchain)),)
   ifeq ($(CONFIG_BOARD_CONFIG_NAME),)
     $(error "Please run make xxx_defconfig first. Use 'make list-def' to see available configurations.")
   endif
@@ -144,7 +150,17 @@ export SDK_UBOOT_SRC_DIR=$(SDK_SRC_ROOT_DIR)/src/uboot
 export SDK_CANMV_SRC_DIR=$(SDK_SRC_ROOT_DIR)/src/canmv
 export SDK_APPS_SRC_DIR=$(SDK_SRC_ROOT_DIR)/src/applications
 
-export SDK_BUILD_DIR=$(SDK_SRC_ROOT_DIR)/output/$(call qstrip,$(CONFIG_BOARD_CONFIG_NAME))
+export SDK_BUILD_DIR?=$(SDK_SRC_ROOT_DIR)/output/$(call qstrip,$(CONFIG_BOARD_CONFIG_NAME))
+
+# With SDK_BUILD_DIR resolved, Kconfig writes its real files in that output,
+# keeping the compatibility symlinks intact.
+# Scope these variables to SDK tools; U-Boot and RT-Smart have their own Kconfig.
+SDK_CONFIG_FILE := $(SDK_BUILD_DIR)/.config
+SDK_CONFIG_AUTO := $(SDK_BUILD_DIR)/include/config/auto.conf
+SDK_CONFIG_HEADER := $(SDK_BUILD_DIR)/include/generated/autoconf.h
+SDK_KCONFIG_ENV = KCONFIG_CONFIG="$(SDK_CONFIG_FILE)" \
+                  KCONFIG_AUTOCONFIG="$(SDK_CONFIG_AUTO)" \
+                  KCONFIG_AUTOHEADER="$(SDK_CONFIG_HEADER)"
 
 export SDK_OPENSBI_BUILD_DIR=$(SDK_BUILD_DIR)/opensbi
 export SDK_RTSMART_BUILD_DIR=$(SDK_BUILD_DIR)/rtsmart
@@ -152,11 +168,11 @@ export SDK_UBOOT_BUILD_DIR=$(SDK_BUILD_DIR)/uboot
 export SDK_CANMV_BUILD_DIR=$(SDK_BUILD_DIR)/canmv
 export SDK_APPS_BUILD_DIR=$(SDK_BUILD_DIR)/applications
 
-export SDK_ARDUINO_SDK_BUILD_DIR=$(SDK_SRC_ROOT_DIR)/output/arduino-sdk
+export SDK_ARDUINO_SDK_BUILD_DIR=$(SDK_BUILD_DIR)/arduino-sdk
 
 export SDK_BUILD_IMAGES_DIR=$(SDK_BUILD_DIR)/images
 
-ifeq ($(strip $(filter $(MAKECMDGOALS),list_def list-def dl_toolchain)),)
+ifeq ($(strip $(filter $(MAKECMDGOALS),help list_def list-def dl_toolchain)),)
   $(call check_build_dir, $(SDK_BUILD_IMAGES_DIR))
 
   $(call check_build_dir, $(SDK_OPENSBI_BUILD_DIR))

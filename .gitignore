@@ -26,6 +26,7 @@ compile_commands.events.json
 
 include/config
 include/generated
+/include
 
 rtsmart_defconfig
 uboot_defconfig
@@ -46,3 +47,5 @@ skills/
 .claude
 .codex
 .copilot
+
+.canmv-test-pairings
