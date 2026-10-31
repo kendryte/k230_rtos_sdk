@@ -35,13 +35,14 @@ distclean: clean
 	fi
 
 .PHONY: gen_kconfig
+# Match Kconfig files directly; older make versions include files in */ matches.
 gen_kconfig:
 	@set -e; \
 	output="$(SDK_BUILD_DIR)/Kconfig.app"; \
 	temporary=$$(mktemp "$$output.XXXXXX"); \
 	trap 'rm -f "$$temporary"' EXIT HUP INT TERM; \
 	echo "# Dynamic generate by Makefile, DO NOT Modify it." > "$$temporary"; \
-	for dir in $(sort $(wildcard $(SDK_APPS_SRC_DIR)/*/)); do \
-		echo "source \"$${dir}Kconfig\"" >> "$$temporary"; \
+	for kconfig in $(sort $(wildcard $(SDK_APPS_SRC_DIR)/*/Kconfig)); do \
+		echo "source \"$$kconfig\"" >> "$$temporary"; \
 	done; \
 	cmp -s "$$temporary" "$$output" || mv "$$temporary" "$$output"
