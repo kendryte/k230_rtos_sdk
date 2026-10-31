@@ -32,6 +32,7 @@ RUN apt-get update && \
     openssh-client \
     rsync \
     dosfstools \
+    mtd-utils \
     ca-certificates \
     && apt-get clean && \
     update-ca-certificates && \

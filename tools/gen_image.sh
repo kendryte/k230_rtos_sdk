@@ -41,7 +41,8 @@ gen_image()
     rm -f "${SDK_BUILD_DIR}/sysimage-sdcard.kdimg" \
         "${SDK_BUILD_DIR}/sysimage-sdcard.img" \
         "${SDK_BUILD_DIR}/sysimage-spinand.kdimg" \
-        "${SDK_BUILD_DIR}/sysimage-spinor.kdimg"
+        "${SDK_BUILD_DIR}/sysimage-spinor.kdimg" \
+        "${SDK_BUILD_DIR}/sysimage-spinor.bin"
 
     # An MMC .img comes with a .kdimg of the same layout for burning tools.
     if ! CONFIG_BOARD="${CONFIG_BOARD}" python3 "${SDK_TOOLS_DIR}/genimage.py" --rootpath "${SDK_BUILD_IMAGES_DIR}" --outputpath "${SDK_BUILD_DIR}" --config "${config}"; then
@@ -88,6 +89,15 @@ gen_image()
         chmod a+rw "${SDK_BUILD_DIR}/${image}.kdimg" "${SDK_BUILD_DIR}/${image}.kdimg.gz" || return 1
         md5sum "${SDK_BUILD_DIR}/${image}.kdimg" "${SDK_BUILD_DIR}/${image}.kdimg.gz" > "${SDK_BUILD_DIR}/${image}.kdimg.gz.md5" || return 1
         echo "Generated MMC kdimage done, at ${SDK_BUILD_DIR}/${image}.kdimg"
+    fi
+
+    if [ "$generated_image_name" = "sysimage-spinor.kdimg" ] && \
+       [ -f "${SDK_BUILD_DIR}/sysimage-spinor.bin" ]; then
+        mv "${SDK_BUILD_DIR}/sysimage-spinor.bin" "${SDK_BUILD_DIR}/${image}.bin" || return 1
+        gzip -k -f "${SDK_BUILD_DIR}/${image}.bin" || return 1
+        chmod a+rw "${SDK_BUILD_DIR}/${image}.bin" "${SDK_BUILD_DIR}/${image}.bin.gz" || return 1
+        (cd "${SDK_BUILD_DIR}" && sha256sum "${image}.bin" > "${image}.bin.sha256") || return 1
+        echo "Generated SPI NOR factory image, program at offset 0: ${SDK_BUILD_DIR}/${image}.bin"
     fi
 }
 

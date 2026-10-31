@@ -20,6 +20,7 @@ from .image_hd import HdImageHandler
 from .image_kd import KdImageHandler
 from .image_uffs import UffsHandler
 from .image_vfat import VFatHandler
+from .image_jffs2 import Jffs2Handler
 
 # image_type : type_handler
 HANDLERS = {
@@ -27,6 +28,7 @@ HANDLERS = {
     "kdimage": KdImageHandler,
     "uffs": UffsHandler,
     "vfat": VFatHandler,
+    "jffs2": Jffs2Handler,
 }
 
 # TODO: Add config file support of 'include'

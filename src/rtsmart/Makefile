@@ -38,7 +38,7 @@ RTSMART_FIRMWARE_IMAGE_DIR := $(SDK_BUILD_IMAGES_DIR)/bin/firmware
 
 .PHONY: all clean distclean menuconfig
 
-.parse_config: $(RTSMART_DEFCONFIG_FILE) $(SDK_SRC_ROOT_DIR)/include/generated/autoconf.h
+.parse_config: $(RTSMART_DEFCONFIG_FILE) $(SDK_CONFIG_HEADER)
 	@export RTT_CC=gcc; \
 	export RTT_CC_PREFIX=$(CROSS_COMPILE_PREFIX); \
 	export RTT_EXEC_PATH=$(CROSS_COMPILE_DIR); \
@@ -46,8 +46,6 @@ RTSMART_FIRMWARE_IMAGE_DIR := $(SDK_BUILD_IMAGES_DIR)/bin/firmware
 	export RTT_SDK_BUILD_DIR=$(SDK_RTSMART_BUILD_DIR)/kernel; \
 	export RTSMART_FIRMWARE_STAGE_DIR=$(RTSMART_FIRMWARE_STAGING_DIR); \
 	export MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp; \
-	cp -f $(SDK_SRC_ROOT_DIR)/include/generated/autoconf.h $(SDK_RTSMART_SRC_DIR)/mpp/include/comm/k_autoconf_comm.h; \
-	cp -f $(SDK_SRC_ROOT_DIR)/include/generated/autoconf.h $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3/k_autoconf_comm.h; \
 	rm -rf $(RTSMART_FIRMWARE_STAGING_DIR); \
 	pushd $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3; \
 	if [ ! -f configs/${RTSMART_DEFCONFIG} ]; then \
@@ -107,7 +105,7 @@ kernel-clean:
 	export RTSMART_FIRMWARE_STAGE_DIR=$(RTSMART_FIRMWARE_STAGING_DIR); \
 	export MPP_SRC_DIR=$(SDK_RTSMART_SRC_DIR)/mpp; \
 	pushd $(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3; \
-	rm -f rtthread.elf .config .config.old k_autoconf_comm.h link_stacksize.lds link.lds rtconfig.h; \
+	rm -f rtthread.elf link_stacksize.lds link.lds; \
 	scons -c || exit $$?; \
 	popd; \
 	rm -rf ${SDK_BUILD_IMAGES_DIR}/rtsmart $(RTSMART_FIRMWARE_STAGING_DIR);
@@ -147,11 +145,15 @@ endif
 	@echo "Generate ${SDK_BUILD_IMAGES_DIR}/bin/config.txt"
 	@$(SDK_SRC_ROOT_DIR)/src/rtsmart/gen_config
 
+# Keep the BSP configuration, headers and marker so a rebuild reuses the
+# current settings instead of reloading the board defconfig.
 clean: mpp-clean kernel-clean libs-clean examples-clean
-	@rm -rf .parse_config
 	@rm -rf ${SDK_BUILD_IMAGES_DIR}/rtsmart
 
 distclean: clean
+	@rm -f .parse_config
+	@cd "$(SDK_RTSMART_SRC_DIR)/rtsmart/kernel/bsp/maix3" && \
+		rm -f .config .config.old k_autoconf_comm.h rtconfig.h
 
 menuconfig:
 	@rm -rf .parse_config
@@ -202,7 +204,7 @@ arduino-sdk:
 	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/mpp
 	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/mpp/api
 	@mkdir -p $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-mpp
-	@cp -rf $(SDK_RTSMART_SRC_DIR)/mpp/include/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/mpp/
+	@cp -rfL $(SDK_RTSMART_SRC_DIR)/mpp/include/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/mpp/
 	@cp -rf $(SDK_RTSMART_SRC_DIR)/mpp/userapps/api/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/include/mpp/api/
 	@cp -rf $(SDK_RTSMART_SRC_DIR)/mpp/userapps/lib/* $(SDK_ARDUINO_SDK_BUILD_DIR)/cores/k230/sdk/lib-mpp/
 

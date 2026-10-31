@@ -15,6 +15,21 @@ import tempfile
 
 
 STATE_PATHS = (".config", ".config.old", "include")
+SDK_HEADER_LINKS = tuple(map(Path, (
+    "src/uboot/uboot/board/kendryte/common/sdk_autoconf.h",
+    "src/rtsmart/mpp/include/comm/k_autoconf_comm.h",
+    "src/rtsmart/rtsmart/kernel/bsp/maix3/k_autoconf_comm.h",
+)))
+# These build tools still read/write generated files in their source trees.
+# Save them with their original mtimes alongside each output's object files.
+RTSMART_BSP = Path("rtsmart/kernel/bsp/maix3")
+RTSMART_STATE_FILES = (Path(".parse_config"),) + tuple(
+    RTSMART_BSP / name for name in (
+        ".config", ".config.old", "rtconfig.h", "cconfig.h",
+        ".sconsign.dblite",
+    )
+)
+RTSMART_LIBRARY_DIRS = (Path("mpp/kernel/lib"), Path("mpp/userapps/lib"))
 INSPECT_GOALS = {"help", "list-def", "list_def"}
 CONFIG_GOALS = INSPECT_GOALS | {"menuconfig", "savedefconfig", "outputmakefile",
                                 "sdk-kconfig", "dl_toolchain", "rm_image", "flash"}
@@ -39,6 +54,25 @@ def link_state(root, output):
         if link.exists() and not link.is_symlink():
             raise ValueError("Refusing to replace unmigrated {}".format(link))
         temporary = root / (name.replace("/", "_") + ".link.{}".format(os.getpid()))
+        try:
+            temporary.symlink_to(target)
+            temporary.replace(link)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+
+def link_sdk_headers(root, output):
+    """Retain legacy include names while sharing the selected output's header."""
+    for name in SDK_HEADER_LINKS:
+        link = root / name
+        # Selecting an SDK configuration must also work before all component
+        # repositories have been downloaded.
+        if not link.parent.is_dir():
+            continue
+        target = os.path.relpath(output / "include/generated/autoconf.h", link.parent)
+        if link.is_symlink() and os.readlink(link) == target:
+            continue
+        temporary = link.with_name(link.name + ".link.{}".format(os.getpid()))
         try:
             temporary.symlink_to(target)
             temporary.replace(link)
@@ -118,13 +152,146 @@ def resolve_output(root, requested, goals):
     return output
 
 
+def copy_build_state(source, destination):
+    if not source.is_file():
+        destination.unlink(missing_ok=True)
+        return
+    if destination.is_file():
+        src_stat, dst_stat = source.stat(), destination.stat()
+        if ((src_stat.st_size, src_stat.st_mtime_ns) == (dst_stat.st_size, dst_stat.st_mtime_ns)
+                and source.read_bytes() == destination.read_bytes()):
+            return
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_name(destination.name + ".copy.{}".format(os.getpid()))
+    try:
+        shutil.copy2(source, temporary)
+        temporary.replace(destination)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def rtsmart_libraries(*directories):
+    return {directory / path.name for base in directories
+            for directory in RTSMART_LIBRARY_DIRS
+            for path in (base / directory).glob("*.a")}
+
+
+def generated_rtsmart_libraries(root, names):
+    """Only ignored archives are build artifacts; releases track their prebuilts."""
+    mpp = root / "src/rtsmart/mpp"
+    if not (mpp / ".git").exists():
+        return None
+    if not names:
+        return set()
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(mpp), "check-ignore", "--stdin", "-z"],
+            input=b"".join(os.fsencode(name.relative_to("mpp")) + b"\0"
+                           for name in sorted(names)),
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    except OSError:
+        return None
+    if result.returncode not in (0, 1):
+        return None
+    return {Path("mpp") / os.fsdecode(name)
+            for name in result.stdout.split(b"\0") if name}
+
+
+def sync_rtsmart_state(source, destination, libraries):
+    for name in (*RTSMART_STATE_FILES, *sorted(libraries)):
+        copy_build_state(source / name, destination / name)
+
+
+def save_rtsmart_state(root, output):
+    # distclean removes the output; do not recreate it in the dispatcher's finally.
+    if (output / ".config").is_file():
+        source = root / "src/rtsmart"
+        saved = output / "rtsmart/.source-state"
+        libraries = generated_rtsmart_libraries(root, rtsmart_libraries(source, saved))
+        sync_rtsmart_state(source, saved, libraries or ())
+        # Discard copies saved by the previous implementation. These aliases
+        # now point directly at include/generated/autoconf.h in the output.
+        for name in SDK_HEADER_LINKS:
+            if name.parts[:2] == ("src", "rtsmart"):
+                (saved / name.relative_to("src/rtsmart")).unlink(missing_ok=True)
+
+
+@contextmanager
+def output_switch_transaction(root, names):
+    """Back up every affected file and link before touching the shared state."""
+    links = {}
+    for name in STATE_PATHS:
+        path = root / name
+        if path.exists() and not path.is_symlink():
+            raise ValueError("Refusing to replace unmigrated {}".format(path))
+        links[name] = os.readlink(path) if path.is_symlink() else None
+    with tempfile.TemporaryDirectory(prefix=".rtsmart-switch-", dir=root / "output") as temporary:
+        backup = Path(temporary)
+        for name in names:
+            path = root / name
+            if path.exists() or path.is_symlink():
+                (backup / name).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(path, backup / name, follow_symlinks=False)
+        try:
+            yield
+        except BaseException:
+            # Rename backups back, so rollback does not need more disk space or
+            # invoke the copy operation that may just have failed.
+            for name in names:
+                path, saved = root / name, backup / name
+                if saved.is_symlink():
+                    if path.is_symlink() and os.readlink(path) == os.readlink(saved):
+                        continue
+                    saved.replace(path)
+                elif saved.exists():
+                    if path.is_file() and not path.is_symlink():
+                        before, after = saved.stat(), path.stat()
+                        if ((before.st_size, before.st_mtime_ns, before.st_mode) ==
+                                (after.st_size, after.st_mtime_ns, after.st_mode)
+                                and saved.read_bytes() == path.read_bytes()):
+                            continue
+                    saved.replace(path)
+                else:
+                    path.unlink(missing_ok=True)
+            for name, target in links.items():
+                path = root / name
+                if target is None:
+                    path.unlink(missing_ok=True)
+                elif not path.is_symlink() or os.readlink(path) != target:
+                    link = root / (name + ".restore.{}".format(os.getpid()))
+                    try:
+                        link.symlink_to(target)
+                        link.replace(path)
+                    finally:
+                        link.unlink(missing_ok=True)
+            raise
+
+
 def activate_output(root, output):
     current = (root / ".config").resolve().parent if (root / ".config").is_symlink() else None
-    link_state(root, output)
+    source, saved = root / "src/rtsmart", output / "rtsmart/.source-state"
+    names = rtsmart_libraries(source, saved) if current != output else set()
+    libraries = generated_rtsmart_libraries(root, names)
+    affected = set(SDK_HEADER_LINKS)
     if current != output:
-        # The RT-Smart BSP still generates configuration in its source tree.
-        # Reconfigure it on the next build after a switch; keep object caches.
-        (root / "src/rtsmart/.parse_config").unlink(missing_ok=True)
+        affected.update(Path("src/rtsmart") / name for name in
+                        set(RTSMART_STATE_FILES) | (names if libraries is None else libraries))
+    if current and current != output:
+        save_rtsmart_state(root, current)
+    with output_switch_transaction(root, sorted(affected)):
+        if current != output:
+            sync_rtsmart_state(saved, source, libraries or ())
+            if libraries is None:
+                # An exported SDK may have no Git metadata. Keep all archives;
+                # making them older than cached objects forces any available
+                # build recipes to rearchive for this output, without deleting
+                # opaque vendor libraries or restoring outdated vendor copies.
+                for name in names:
+                    path = source / name
+                    if path.is_file():
+                        os.utime(path, ns=(path.stat().st_atime_ns, 0))
+        link_state(root, output)
+        link_sdk_headers(root, output)
 
 
 def make_inspection_mode():
@@ -251,6 +418,7 @@ def main():
         return run_make(goals)
 
     fd, owned = build_lock(root)
+    activated = False
     try:
         env["SDK_BUILD_LOCK_FD"] = str(fd)
         migrate_legacy(root)
@@ -269,10 +437,12 @@ def main():
                 if status:
                     return status
                 activate_output(root, output)
+                activated = True
                 commit()
             return 0
         if output:
             activate_output(root, output)
+            activated = True
         if output and needs_sync(goals):
             for target in ("sdk-kconfig", ".autoconf"):
                 status = run_make([target])
@@ -283,8 +453,13 @@ def main():
         # Re-read the now synchronized .config before make evaluates conditionals.
         return run_make(goals)
     finally:
-        if owned:
-            os.close(fd)
+        try:
+            config = root / ".config"
+            if activated and config.is_symlink():
+                save_rtsmart_state(root, config.resolve().parent)
+        finally:
+            if owned:
+                os.close(fd)
 
 
 if __name__ == "__main__":

@@ -20,7 +20,6 @@ ifeq ($(CONFIG_UBOOT_USE_PREBUILT),y)
 	@cp $(SDK_BOARD_DIR)/$(CONFIG_UBOOT_PREBUILT_UBOOT_PATH) $(SDK_UBOOT_BUILD_DIR)/u-boot.bin
 else
 	@echo "Building U-Boot from source"
-	@cp $(SDK_SRC_ROOT_DIR)/include/generated/autoconf.h $(SDK_UBOOT_SRC_DIR)/uboot/board/kendryte/common/sdk_autoconf.h
 	@python3 $(SDK_TOOLS_DIR)/gen_uboot_secure_header.py --config $(SDK_SRC_ROOT_DIR)/.config --output $(SDK_UBOOT_SRC_DIR)/uboot/board/kendryte/common/secure_boot_config_autogen.h
 	@$(MAKE) -C uboot $(UBOOT_DEFCONFIG) ARCH=riscv O=$(SDK_UBOOT_BUILD_DIR)
 	@# Both baud symbols are Kconfig int values (decimal, not hex).
