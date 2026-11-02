@@ -80,14 +80,28 @@ def link_sdk_headers(root, output):
             temporary.unlink(missing_ok=True)
 
 
-def migrate_legacy(root):
-    """Move the current legacy state without changing file contents or mtimes."""
+def migrate_legacy(root, selected_output):
+    """Move the current legacy state without changing file contents or mtimes.
+
+    selected_output only enables orphaned-state backups under root/output when
+    an output has been selected. A legacy .config determines its own migration
+    destination, regardless of selected_output.
+    """
     config = root / ".config"
-    if config.is_symlink() or not config.exists():
-        return
-    output = root / "output" / config_name(config)
     sources = [root / name for name in STATE_PATHS
                if (root / name).exists() and not (root / name).is_symlink()]
+    if config.is_symlink() or not config.exists():
+        if selected_output and sources:
+            # Leftover root files can survive removal or migration of .config.
+            # Keep them separately: the selected output may already contain
+            # newer generated headers, or belong to a different board.
+            # Backups survive distclean; remove them manually when no longer needed.
+            backup = Path(tempfile.mkdtemp(prefix="legacy-state-", dir=root / "output"))
+            for source in sources:
+                source.rename(backup / source.name)
+            print("SDK output: Saved legacy state to {}".format(backup))
+        return
+    output = root / "output" / config_name(config)
     for source in sources:
         destination = output / source.name
         if destination.exists() or destination.is_symlink():
@@ -361,6 +375,8 @@ def build_subprocess_fds():
 
 def build_lock(root):
     """Keep root links stable for a whole build, including recursive SDK makes."""
+    # Keep this file even after distclean. Unlinking it could let another build
+    # lock a new inode while this process still holds the original inode's lock.
     lock_path = root / "output/.build.lock"
     lock_path.parent.mkdir(exist_ok=True)
     inherited = os.environ.get("SDK_BUILD_LOCK_FD")
@@ -421,7 +437,7 @@ def main():
     activated = False
     try:
         env["SDK_BUILD_LOCK_FD"] = str(fd)
-        migrate_legacy(root)
+        migrate_legacy(root, output)
         if output:
             output.mkdir(parents=True, exist_ok=True)
             (output / "include").mkdir(exist_ok=True)

@@ -129,7 +129,7 @@ CONFIG_BOARD := $(call qstrip,$(CONFIG_BOARD))
 
 export CONFIG_SDK_ENABLE_CANMV
 
-ifeq ($(strip $(filter $(MAKECMDGOALS),help list_def list-def dl_toolchain)),)
+ifneq ($(strip $(filter-out help list_def list-def dl_toolchain distclean,$(or $(MAKECMDGOALS),all))),)
   ifeq ($(CONFIG_BOARD_CONFIG_NAME),)
     $(error "Please run make xxx_defconfig first. Use 'make list-def' to see available configurations.")
   endif
@@ -172,7 +172,7 @@ export SDK_ARDUINO_SDK_BUILD_DIR=$(SDK_BUILD_DIR)/arduino-sdk
 
 export SDK_BUILD_IMAGES_DIR=$(SDK_BUILD_DIR)/images
 
-ifeq ($(strip $(filter $(MAKECMDGOALS),help list_def list-def dl_toolchain)),)
+ifneq ($(strip $(filter-out help list_def list-def dl_toolchain distclean,$(or $(MAKECMDGOALS),all))),)
   $(call check_build_dir, $(SDK_BUILD_IMAGES_DIR))
 
   $(call check_build_dir, $(SDK_OPENSBI_BUILD_DIR))

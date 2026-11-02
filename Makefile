@@ -231,13 +231,21 @@ clean: kconfig-clean uboot-clean rtsmart-clean opensbi-clean canmv-clean app-cle
 	@echo "Clean done."
 
 .PHONY: distclean
-distclean: kconfig-distclean uboot-distclean rtsmart-distclean opensbi-distclean canmv-distclean app-distclean
+distclean: kconfig-distclean
+# Without a board configuration, component cleanup has no selected output.
+# Keep saved board outputs intact and only remove the root's leftover state.
+ifneq ($(strip $(CONFIG_BOARD_CONFIG_NAME)),)
+distclean: uboot-distclean rtsmart-distclean opensbi-distclean canmv-distclean app-distclean
+endif
+distclean:
 	$(call del_mark)
-	@rm -rf $(SDK_BUILD_DIR)
+ifneq ($(strip $(CONFIG_BOARD_CONFIG_NAME)),)
+	@rm -rf "$(SDK_BUILD_DIR)"
+endif
 	@rm -rf $(SDK_SRC_ROOT_DIR)/.cache
 	@rm -rf $(SDK_SRC_ROOT_DIR)/.config
 	@rm -rf $(SDK_SRC_ROOT_DIR)/.config.old
-	@rm -f $(SDK_SRC_ROOT_DIR)/include
+	@rm -rf $(SDK_SRC_ROOT_DIR)/include
 	@rm -rf $(SDK_SRC_ROOT_DIR)/defconfig
 	@rm -rf $(SDK_SRC_ROOT_DIR)/uboot_defconfig
 	@rm -rf $(SDK_SRC_ROOT_DIR)/rtsmart_defconfig
