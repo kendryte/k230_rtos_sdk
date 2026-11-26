@@ -258,9 +258,9 @@ log: SHELL := /bin/bash
 log: .SHELLFLAGS := -o pipefail -c
 log:
 ifeq ($(BEAR_EXISTS),yes)
-	@$(BEAR_COMMAND) $(MAKE) 2>&1 | tee "$(SDK_BUILD_DIR)/log.txt"
+	@$(BEAR_COMMAND) $(MAKE) --output-sync=target 2>&1 | tee "$(SDK_BUILD_DIR)/log.txt"
 else
-	@$(MAKE) 2>&1 | tee "$(SDK_BUILD_DIR)/log.txt"
+	@$(MAKE) --output-sync=target 2>&1 | tee "$(SDK_BUILD_DIR)/log.txt"
 endif
 
 .PHONY: dl_toolchain

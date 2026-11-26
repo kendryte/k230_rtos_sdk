@@ -96,7 +96,7 @@ repo sync
 4. **Start the build process**:
 
    ```bash
-   time make log
+   time make log -j$(nproc)
    ```
 
 This process will compile the software tailored to your selected board configuration.
@@ -160,7 +160,9 @@ the active output. `make -n` reports the output and delegated make command
 without running sub-builds or changing configuration links.
 
 `make log` writes `output/<defconfig>/log.txt` and returns a failure if the build
-fails. A full `make` clears the selected output's `images/` directory first, so
+fails. Use `make log -j$(nproc)` to keep parallel target output grouped in the
+log. Synchronized parallel output requires GNU Make 4.0 or newer. A full `make`
+clears the selected output's `images/` directory first, so
 disabled components and applications leave no stale files in the image.
 Component builds such as `make uboot` preserve other components' staged images;
 use `make rm_image` to clear `images/` explicitly. `make arduino-sdk-clean` removes the selected output's exported
